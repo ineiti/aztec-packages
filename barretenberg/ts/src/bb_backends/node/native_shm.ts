@@ -61,9 +61,9 @@ export class BarretenbergNativeShmSyncBackend implements IMsgpackBackendSync {
     // Default maxClients to 1 if not specified
     const clientCount = maxClients ?? 1;
 
-    // Set HARDWARE_CONCURRENCY if threads specified
-    const env = { ...process.env, HARDWARE_CONCURRENCY: threads !== undefined ? threads.toString() : '1' };
-    // const env = threads !== undefined ? { ...process.env, HARDWARE_CONCURRENCY: threads.toString() } : process.env;
+    // If threads not set use 1 thread. We're not expected to do long lived work on sync backends.
+    const hwc = threads ? threads.toString() : '1';
+    const env = { ...process.env, HARDWARE_CONCURRENCY: '1' };
 
     // Spawn bb process with shared memory mode
     const args = [bbBinaryPath, 'msgpack', 'run', '--input', `${shmName}.shm`, '--max-clients', clientCount.toString()];

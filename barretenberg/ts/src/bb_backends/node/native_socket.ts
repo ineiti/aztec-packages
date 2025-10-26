@@ -58,8 +58,9 @@ export class BarretenbergNativeSocketAsyncBackend implements IMsgpackBackendAsyn
       connectionReject = reject;
     });
 
-    // Set HARDWARE_CONCURRENCY if threads specified
-    const env = threads !== undefined ? { ...process.env, HARDWARE_CONCURRENCY: threads.toString() } : process.env;
+    // If threads not set use num cpu cores, max 32.
+    const hwc = threads ? threads.toString() : Math.min(32, os.cpus.length).toString();
+    const env = { ...process.env, HARDWARE_CONCURRENCY: '1' };
 
     // Spawn bb process - it will create the socket server
     const args = [bbBinaryPath, 'msgpack', 'run', '--input', this.socketPath];
