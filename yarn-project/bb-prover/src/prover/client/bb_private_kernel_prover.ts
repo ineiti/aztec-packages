@@ -280,7 +280,6 @@ export abstract class BBPrivateKernelProver implements PrivateKernelProver {
       executionSteps.map(step => ungzip(serializeWitness(step.witness))),
       executionSteps.map(step => step.vk),
     );
-    await backend.destroy();
     this.log.info(`Generated ClientIVC proof`, {
       eventName: 'client-ivc-proof-generation',
       duration: timer.ms(),
@@ -294,7 +293,6 @@ export abstract class BBPrivateKernelProver implements PrivateKernelProver {
     const backend = new AztecClientBackend([ungzip(_bytecode)], Barretenberg.getSingleton());
 
     const gateCount = await backend.gates();
-    await backend.destroy();
 
     return gateCount[0];
   }

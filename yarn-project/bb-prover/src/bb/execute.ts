@@ -6,6 +6,7 @@ import type { AvmCircuitInputs, AvmCircuitPublicInputs } from '@aztec/stdlib/avm
 import * as proc from 'child_process';
 import { promises as fs } from 'fs';
 import { basename, dirname, join } from 'path';
+import readline from 'readline';
 
 import type { UltraHonkFlavor } from '../honk.js';
 
@@ -100,8 +101,8 @@ export function executeBB(
       }, timeout);
     }
 
-    // readline.createInterface({ input: bb.stdout }).on('line', logger);
-    // readline.createInterface({ input: bb.stderr }).on('line', logger);
+    readline.createInterface({ input: bb.stdout }).on('line', logger);
+    readline.createInterface({ input: bb.stderr }).on('line', logger);
 
     bb.on('close', (exitCode: number, signal?: string) => {
       if (timeoutId) {
