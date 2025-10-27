@@ -67,6 +67,12 @@ export function injectAztecCommands(program: Command, userLog: LogFn, debugLogge
       $ aztec start --txe
     then runs
       $ aztec-nargo test --silence-warnings --oracle-resolver=<TXE_ADDRESS> [options]
+
+    lsp: starts the Nargo Language Server Protocol server
+      Runs nargo lsp in a Docker container for IDE integration with Noir.
+      This command is typically used by IDE extensions and not called directly by users.
+      Example:
+        $ aztec lsp                     # starts the LSP server
     `,
   );
 
