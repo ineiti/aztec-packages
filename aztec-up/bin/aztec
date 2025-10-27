@@ -150,8 +150,6 @@ EOF
     ;;
   test)
     shift
-    # Should this just be aztec-test? It's like, a new command that doesn't exist on aztec cli.
-    # Or just make this a first class command on aztec cli?
 
     export ENV_VARS_TO_INJECT="LOG_LEVEL"
     export LOG_LEVEL="${LOG_LEVEL:-info}"
