@@ -333,14 +333,13 @@ EOF
           shift
           ;;
         *)
-          # Assume it's the folder argument
           NARGO_ARGS+=("$1")
           shift
           ;;
       esac
     done
 
-      # Default to --contract if no type flag was provided
+    # Default to --contract if no type flag was provided
     if [ "$HAS_TYPE_FLAG" = false ]; then
       NARGO_ARGS+=("--contract")
     fi
@@ -351,6 +350,26 @@ EOF
 
     # Run nargo init via docker (matching aztec-nargo's setup)
     run_nargo "${NARGO_ARGS[@]}"
+
+    # Check if nargo init succeeded
+    if [ $? -ne 0 ]; then
+      >&2 echo "Initialization failed!"
+      exit 1
+    fi
+
+    # We add the aztec dependency to the Nargo.toml file. Makes sense to do here and not directly in `nargo init`
+    # command because in `nargo` we don't know what version of Aztec.nr to use.
+
+    # Get the actual aztec version for the git tag
+    AZTEC_VERSION=$(docker run --rm --entrypoint=node $DOCKER_REPO:$VERSION --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js --version 2>/dev/null | tr -d '\n\r')
+
+    if [ -f "Nargo.toml" ]; then
+      echo "" >> "Nargo.toml"
+      echo "aztec = { git=\"https://github.com/AztecProtocol/aztec-packages/\", tag=\"v${AZTEC_VERSION}\", directory=\"noir-projects/aztec-nr/aztec\" }" >> "Nargo.toml"
+      echo "Added aztec dependency (v${AZTEC_VERSION}) to Nargo.toml"
+    else
+      >&2 echo "Warning: Could not find Nargo.toml to add aztec dependency"
+    fi
     ;;
   fmt)
     shift
