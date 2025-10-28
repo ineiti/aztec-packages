@@ -35,6 +35,10 @@ export class Barretenberg extends AsyncApi {
    *   2. WasmWorker (in browser) or Wasm (in Node.js)
    */
   static async new(options: BackendOptions = {}) {
+    options = {
+      ...options,
+      wasmPath: process.env.BB_WASM_PATH,
+    };
     const logger = options.logger ?? createDebugLogger('bb_async');
 
     if (options.backend) {
@@ -167,6 +171,10 @@ export class BarretenbergSync extends SyncApi {
    * Not supported: WasmWorker (no workers in sync), NativeUnixSocket (async only)
    */
   static async new(options: BackendOptions = {}) {
+    options = {
+      ...options,
+      wasmPath: process.env.BB_WASM_PATH,
+    };
     const logger = options.logger ?? createDebugLogger('bb_sync');
 
     if (options.backend) {
