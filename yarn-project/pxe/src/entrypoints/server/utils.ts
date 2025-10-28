@@ -1,5 +1,4 @@
-import { BBNativePrivateKernelProver } from '@aztec/bb-prover/client/native';
-import { BBWASMBundlePrivateKernelProver } from '@aztec/bb-prover/client/wasm/bundle';
+import { BBBundlePrivateKernelProver } from '@aztec/bb-prover/client/bundle';
 import { randomBytes } from '@aztec/foundation/crypto';
 import { type Logger, createLogger } from '@aztec/foundation/log';
 import { BundledProtocolContractsProvider } from '@aztec/protocol-contracts/providers/bundle';
@@ -80,14 +79,5 @@ function createProver(
   simulator: CircuitSimulator,
   logger?: Logger,
 ) {
-  if (!config.bbBinaryPath || !config.bbWorkingDirectory) {
-    return new BBWASMBundlePrivateKernelProver(simulator, 16, logger);
-  } else {
-    const bbConfig = config as Required<Pick<PXEConfig, 'bbBinaryPath' | 'bbWorkingDirectory'>> & PXEConfig;
-    return BBNativePrivateKernelProver.new(
-      { bbSkipCleanup: false, numConcurrentIVCVerifiers: 1, bbIVCConcurrency: 1, ...bbConfig },
-      simulator,
-      logger,
-    );
-  }
+  return new BBBundlePrivateKernelProver(simulator, 16, logger);
 }

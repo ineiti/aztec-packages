@@ -1,6 +1,5 @@
 import type { Logger } from '@aztec/aztec.js/log';
 import { BBNativePrivateKernelProver } from '@aztec/bb-prover/client/native';
-import { BBWASMBundlePrivateKernelProver } from '@aztec/bb-prover/client/wasm/bundle';
 import { createLogger, logger } from '@aztec/foundation/log';
 import { Timer } from '@aztec/foundation/timer';
 import { WASMSimulator } from '@aztec/simulator/client';
@@ -11,6 +10,7 @@ import { Decoder } from 'msgpackr';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import { BBWASMBundlePrivateKernelProver } from '../../../../bb-prover/dest/prover/client/bundle.js';
 import { type Log, type ProverType, ProxyLogger, generateBenchmark } from './benchmark.js';
 
 type NativeProverConfig = { bbBinaryPath?: string; bbWorkingDirectory?: string };
