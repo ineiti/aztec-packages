@@ -298,6 +298,121 @@ EOF
       -v $(realpath $(dirname $2))/:/tmp \
       $DOCKER_REPO:$VERSION /tmp/$(basename $2) $3
     ;;
+  new)
+    shift
+
+    validate_working_directory
+
+    # Build nargo new command arguments
+    NARGO_ARGS=("new")
+    PROJECT_PATH=""
+
+    # Parse arguments
+    # Note: I allow devs to use the `aztec` command to also create bin and lib projects because we currently rely
+    # on the dockerized nargo and I am not sure if it's expected they will have a native nargo on path. If we decide
+    # to use native nargo I think we can just hardcode --contract here and not bother with the other options.
+    HAS_TYPE_FLAG=false
+    while [ "$#" -gt 0 ]; do
+      case $1 in
+        --name)
+          NARGO_ARGS+=("--name" "$2")
+          shift 2
+          ;;
+        --lib)
+          NARGO_ARGS+=("--lib")
+          HAS_TYPE_FLAG=true
+          shift
+          ;;
+        --bin)
+          NARGO_ARGS+=("--bin")
+          HAS_TYPE_FLAG=true
+          shift
+          ;;
+        --contract)
+          NARGO_ARGS+=("--contract")
+          HAS_TYPE_FLAG=true
+          shift
+          ;;
+        --help|-h)
+          # Show help for aztec new
+          cat << 'EOF'
+Aztec New - Create a new Aztec Noir project in a new directory
+
+Usage: aztec new [OPTIONS] <PATH>
+
+Arguments:
+  <PATH>  The path to save the new project
+
+Options:
+  --name <NAME>  Name of the package [default: package directory name]
+  --lib          Use a library template
+  --bin          Use a binary template
+  --contract     Use a contract template [default]
+  -h, --help     Print help
+
+This command creates a new Aztec Noir project using nargo and automatically
+adds the Aztec.nr dependency to your Nargo.toml file.
+
+ENVIRONMENT VARIABLES:
+  AZTEC_PATH    Path to Aztec installation (default: $HOME/.aztec)
+  VERSION       Aztec version to use (default: from $AZTEC_PATH/default_version)
+  DOCKER_REPO   Docker repository (default: aztecprotocol/aztec)
+
+EOF
+          exit 0
+          ;;
+        -*)
+          echo "Unknown option: $1"
+          echo "Run 'aztec new --help' for usage information"
+          exit 1
+          ;;
+        *)
+          # This should be the PATH argument
+          PROJECT_PATH="$1"
+          NARGO_ARGS+=("$1")
+          shift
+          ;;
+      esac
+    done
+
+    # Check if PATH was provided
+    if [ -z "$PROJECT_PATH" ]; then
+      echo "Error: PATH argument is required"
+      echo "Usage: aztec new [OPTIONS] <PATH>"
+      echo "Run 'aztec new --help' for more information"
+      exit 1
+    fi
+
+    # Default to --contract if no type flag was provided
+    if [ "$HAS_TYPE_FLAG" = false ]; then
+      NARGO_ARGS+=("--contract")
+    fi
+
+    echo "Creating new Noir project at $PROJECT_PATH..."
+
+    # Run nargo new via docker
+    run_nargo "${NARGO_ARGS[@]}"
+
+    # Check if nargo new succeeded
+    if [ $? -ne 0 ]; then
+      >&2 echo "Project creation failed!"
+      exit 1
+    fi
+
+    # We add the aztec dependency to the Nargo.toml file. Makes sense to do here and not directly in `nargo new`
+    # command because in `nargo` we don't know what version of Aztec.nr to use.
+
+    # Get the actual aztec version for the git tag
+    AZTEC_VERSION=$(docker run --rm --entrypoint=node $DOCKER_REPO:$VERSION --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js --version 2>/dev/null | tr -d '\n\r')
+
+    if [ -f "$PROJECT_PATH/Nargo.toml" ]; then
+      echo "" >> "$PROJECT_PATH/Nargo.toml"
+      echo "aztec = { git=\"https://github.com/AztecProtocol/aztec-packages/\", tag=\"v${AZTEC_VERSION}\", directory=\"noir-projects/aztec-nr/aztec\" }" >> "$PROJECT_PATH/Nargo.toml"
+      echo "Added aztec dependency (v${AZTEC_VERSION}) to Nargo.toml"
+    else
+      >&2 echo "Warning: Could not find Nargo.toml at $PROJECT_PATH/Nargo.toml to add aztec dependency"
+    fi
+    ;;
   init)
     shift
 
