@@ -57,7 +57,7 @@ describe('Client IVC Integration - Browser with Puppeteer', () => {
     if (!existsSync(join(distPath, 'index.js'))) {
       logger.info('Building browser bundle with webpack...');
       try {
-        execSync('yarn build:browser-app', { cwd: projectRoot, stdio: 'inherit' });
+        execSync('yarn webpack', { cwd: projectRoot, stdio: 'inherit' });
       } catch (error) {
         logger.error('Failed to build browser bundle');
         throw error;
