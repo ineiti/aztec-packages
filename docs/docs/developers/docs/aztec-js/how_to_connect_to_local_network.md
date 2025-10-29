@@ -1,15 +1,15 @@
 ---
 title: Getting Started
-tags: [sandbox, connection, pxe]
+tags: [local_network, connection, pxe]
 sidebar_position: 1
-description: Connect your application to the Aztec sandbox and interact with accounts.
+description: Connect your application to the Aztec local network and interact with accounts.
 ---
 
-This guide shows you how to connect your application to the Aztec sandbox and interact with the network.
+This guide shows you how to connect your application to the Aztec local network and interact with the network.
 
 ## Prerequisites
 
-- Running Aztec sandbox (see [Quickstart](../../getting_started_on_sandbox.md)) on port 8080
+- Running Aztec local network (see [Quickstart](../../getting_started_on_local_network.md)) on port 8080
 - Node.js installed
 - TypeScript project set up
 
@@ -23,7 +23,7 @@ yarn add @aztec/aztec.js@#include_version_without_prefix
 
 ## Create a Node Client
 
-The sandbox is essentially a one-node network. Just like on a real network, you need to interface with it:
+The local network is essentially a one-node network. Just like on a real network, you need to interface with it:
 
 ```typescript
 const node = createAztecNodeClient("http://localhost:8080");
@@ -34,7 +34,7 @@ As the name implies, we want to know the L1 Contracts addresses for our PXE.
 
 ## Create a PXE
 
-Although the sandbox comes with its own PXE, it's useful to create one specifically for your use-case. You will need to bring your own PXE to the testnet eventually. Let's create a PXE store and configure it:
+Although the local network comes with its own PXE, it's useful to create one specifically for your use-case. You will need to bring your own PXE to the testnet eventually. Let's create a PXE store and configure it:
 
 ```typescript
 import { createStore } from "@aztec/kv-store/lmdb";
@@ -58,7 +58,7 @@ Get node information to confirm your connection:
 
 ```typescript
 const nodeInfo = await pxe.getNodeInfo();
-console.log("Connected to sandbox version:", nodeInfo.nodeVersion);
+console.log("Connected to local network version:", nodeInfo.nodeVersion);
 console.log("Chain ID:", nodeInfo.l1ChainId);
 ```
 
@@ -76,7 +76,7 @@ const wallet = await TestWallet.create(node);
 
 ### Get test accounts
 
-The sandbox has some accounts pre-funded with fee-juice to pay for gas. You can import them and create accounts:
+The local network has some accounts pre-funded with fee-juice to pay for gas. You can import them and create accounts:
 
 ```typescript
 import { getInitialTestAccountsData } from "@aztec/accounts/testing";

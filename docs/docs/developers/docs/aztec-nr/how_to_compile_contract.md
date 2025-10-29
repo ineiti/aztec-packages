@@ -10,7 +10,7 @@ This guide shows you how to compile your Aztec contracts into artifacts ready fo
 ## Prerequisites
 
 - An Aztec contract written in Aztec.nr
-- `aztec-nargo` installed (included with the sandbox)
+- `aztec-nargo`
 - Contract project with proper `Nargo.toml` configuration
 
 ## Compile your contract
