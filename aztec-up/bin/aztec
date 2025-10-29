@@ -137,14 +137,13 @@ EOF
 
     echo "Postprocessing contract..."
 
-    # Run postprocessing script
     docker run ${TTY_FLAGS:-} \
       --user $(id -u):$(id -g) \
       -v $HOME:$HOME \
       -e HOME=$HOME \
       --workdir="$PWD" \
-      --entrypoint=/usr/src/aztec-postprocess-contract/transpile_contract_and_gen_vks.sh \
-      $DOCKER_REPO:$VERSION
+      --entrypoint=/usr/src/barretenberg/cpp/build/bin/bb \
+      $DOCKER_REPO:$VERSION aztec_process
 
     echo "Compilation complete!"
     ;;
@@ -346,7 +345,7 @@ EOF
 
     validate_working_directory
 
-    # Run nargo init via docker (matching aztec-nargo's setup)
+    # Run nargo init via docker
     run_nargo "${NARGO_ARGS[@]}"
 
     # Check if nargo init succeeded
