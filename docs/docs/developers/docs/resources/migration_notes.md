@@ -9,6 +9,14 @@ Aztec is in full-speed development. Literally every version breaks compatibility
 
 ## TBD
 
+### [CLI] Command refactor
+
+The sandbox command has been renamed and remapped to "local network". We believe this conveys better what is actually being spun up when running it.
+
+**REMOVED/RENAMED**:
+
+- `aztec start --sandbox`: now `aztec start --local-network`
+
 ## [aztec.js] Removal of barrel export
 
 `aztec.js` is now divided into granular exports, which improves loading performance in node.js and also makes the job of web bundlers easier:
