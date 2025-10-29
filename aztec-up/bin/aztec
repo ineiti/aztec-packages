@@ -406,9 +406,6 @@ EOF
     shift
 
     # Parse arguments
-    # Note: I allow devs to use the `aztec` command to also create bin and lib projects because we currently rely
-    # on the dockerized nargo and I am not sure if it's expected they will have a native nargo on path. If we decide
-    # to use native nargo I think we can just hardcode --contract here and not bother with the other options.
     parse_project_flags_and_build_nargo_args "new" "$@"
     PARSE_RESULT=$?
 
@@ -471,9 +468,6 @@ EOF
     shift
 
     # Parse arguments
-    # Note: I allow devs to use the `aztec` command to also create bin and lib projects because we currently rely
-    # on the dockerized nargo and I am not sure if it's expected they will have a native nargo on path. If we decide
-    # to use native nargo I think we can just hardcode --contract here and not bother with the other options.
     parse_project_flags_and_build_nargo_args "init" "$@"
     PARSE_RESULT=$?
 
