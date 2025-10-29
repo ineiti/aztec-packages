@@ -454,6 +454,36 @@ EOF
           IS_CONTRACT=true
           shift
           ;;
+        --help|-h)
+          # Show help for aztec init
+          cat << 'EOF'
+Aztec Init - Create a new Aztec Noir project in the current directory
+
+Usage: aztec init [OPTIONS]
+
+Options:
+  --name <NAME>  Name of the package [default: current directory name]
+  --lib          Use a library template
+  --bin          Use a binary template
+  --contract     Use a contract template [default]
+  -h, --help     Print help
+
+This command creates a new Aztec Noir project in the current directory using nargo
+and automatically adds the Aztec.nr dependency to your Nargo.toml file.
+
+ENVIRONMENT VARIABLES:
+  AZTEC_PATH    Path to Aztec installation (default: $HOME/.aztec)
+  VERSION       Aztec version to use (default: from $AZTEC_PATH/default_version)
+  DOCKER_REPO   Docker repository (default: aztecprotocol/aztec)
+
+EOF
+          exit 0
+          ;;
+        -*)
+          echo "Unknown option: $1"
+          echo "Run 'aztec init --help' for usage information"
+          exit 1
+          ;;
         *)
           NARGO_ARGS+=("$1")
           shift
