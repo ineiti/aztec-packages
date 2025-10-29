@@ -307,6 +307,9 @@ EOF
     NARGO_ARGS=("init")
 
     # Parse arguments
+    # Note: I allow devs to use the `aztec` command to also create bin and lib projects because we currently rely
+    # on the dockerized nargo and I am not sure if it's expected they will have a native nargo on path. If we decide
+    # to use native nargo I think we can just hardcode --contract here and not bother with the other options.
     HAS_TYPE_FLAG=false
     while [ "$#" -gt 0 ]; do
       case $1 in
