@@ -85,6 +85,110 @@ function run_nargo {
     $DOCKER_REPO:$VERSION "$@"
 }
 
+function setup_aztec_contract_project {
+  # Setup an Aztec contract project by adding dependencies and creating the main.nr template
+  # Usage: setup_aztec_contract_project <project_path>
+  # If project_path is ".", operates in current directory
+  local PROJECT_DIR="$1"
+
+  # Get the actual aztec version for the git tag
+  AZTEC_VERSION=$(docker run --rm --entrypoint=node $DOCKER_REPO:$VERSION --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js --version 2>/dev/null | tr -d '\n\r')
+
+  # Determine file paths based on whether we're in current dir or a subdirectory
+  if [ "$PROJECT_DIR" = "." ]; then
+    NARGO_TOML_PATH="Nargo.toml"
+    MAIN_NR_PATH="src/main.nr"
+  else
+    NARGO_TOML_PATH="$PROJECT_DIR/Nargo.toml"
+    MAIN_NR_PATH="$PROJECT_DIR/src/main.nr"
+  fi
+
+  # Add aztec dependency to Nargo.toml
+  if [ -f "$NARGO_TOML_PATH" ]; then
+    echo "" >> "$NARGO_TOML_PATH"
+    echo "aztec = { git=\"https://github.com/AztecProtocol/aztec-packages/\", tag=\"v${AZTEC_VERSION}\", directory=\"noir-projects/aztec-nr/aztec\" }" >> "$NARGO_TOML_PATH"
+    echo "Added aztec dependency (v${AZTEC_VERSION}) to Nargo.toml"
+  else
+    >&2 echo "Warning: Could not find Nargo.toml at $NARGO_TOML_PATH to add aztec dependency"
+  fi
+
+  # Replace the contents of main.nr with the Aztec contract template
+  if [ -f "$MAIN_NR_PATH" ]; then
+    cat > "$MAIN_NR_PATH" << 'EOF'
+use aztec::macros::aztec;
+
+#[aztec]
+contract Main {}
+EOF
+    echo "Created main.nr with Aztec contract template"
+  else
+    >&2 echo "Warning: Could not find main.nr at $MAIN_NR_PATH"
+  fi
+}
+
+function parse_project_flags_and_build_nargo_args {
+  # Parse project type flags and build nargo arguments
+  # Usage: Call this function and it will populate NARGO_ARGS, HAS_TYPE_FLAG, IS_CONTRACT
+  # For 'new' command: pass "new" as first arg and handle PATH specially
+  # For 'init' command: pass "init" as first arg
+  local COMMAND="$1"
+  shift
+
+  NARGO_ARGS=("$COMMAND")
+  HAS_TYPE_FLAG=false
+  IS_CONTRACT=false
+  PROJECT_PATH=""
+
+  while [ "$#" -gt 0 ]; do
+    case $1 in
+      --name)
+        NARGO_ARGS+=("--name" "$2")
+        shift 2
+        ;;
+      --lib)
+        NARGO_ARGS+=("--lib")
+        HAS_TYPE_FLAG=true
+        shift
+        ;;
+      --bin)
+        NARGO_ARGS+=("--bin")
+        HAS_TYPE_FLAG=true
+        shift
+        ;;
+      --contract)
+        NARGO_ARGS+=("--contract")
+        HAS_TYPE_FLAG=true
+        IS_CONTRACT=true
+        shift
+        ;;
+      --help|-h)
+        return 2  # Special return code to indicate help was requested
+        ;;
+      -*)
+        echo "Unknown option: $1"
+        echo "Run 'aztec $COMMAND --help' for usage information"
+        exit 1
+        ;;
+      *)
+        # For 'new' command, this is the PATH argument
+        if [ "$COMMAND" = "new" ]; then
+          PROJECT_PATH="$1"
+        fi
+        NARGO_ARGS+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  # Default to --contract if no type flag was provided
+  if [ "$HAS_TYPE_FLAG" = false ]; then
+    NARGO_ARGS+=("--contract")
+    IS_CONTRACT=true
+  fi
+
+  return 0
+}
+
 case ${1:-} in
   compile)
     shift
@@ -301,43 +405,16 @@ EOF
   new)
     shift
 
-    validate_working_directory
-
-    # Build nargo new command arguments
-    NARGO_ARGS=("new")
-    PROJECT_PATH=""
-
     # Parse arguments
     # Note: I allow devs to use the `aztec` command to also create bin and lib projects because we currently rely
     # on the dockerized nargo and I am not sure if it's expected they will have a native nargo on path. If we decide
     # to use native nargo I think we can just hardcode --contract here and not bother with the other options.
-    HAS_TYPE_FLAG=false
-    IS_CONTRACT=false
-    while [ "$#" -gt 0 ]; do
-      case $1 in
-        --name)
-          NARGO_ARGS+=("--name" "$2")
-          shift 2
-          ;;
-        --lib)
-          NARGO_ARGS+=("--lib")
-          HAS_TYPE_FLAG=true
-          shift
-          ;;
-        --bin)
-          NARGO_ARGS+=("--bin")
-          HAS_TYPE_FLAG=true
-          shift
-          ;;
-        --contract)
-          NARGO_ARGS+=("--contract")
-          HAS_TYPE_FLAG=true
-          IS_CONTRACT=true
-          shift
-          ;;
-        --help|-h)
-          # Show help for aztec new
-          cat << 'EOF'
+    parse_project_flags_and_build_nargo_args "new" "$@"
+    PARSE_RESULT=$?
+
+    # Handle help request
+    if [ $PARSE_RESULT -eq 2 ]; then
+      cat << 'EOF'
 Aztec New - Create a new Aztec Noir project in a new directory
 
 Usage: aztec new [OPTIONS] <PATH>
@@ -361,21 +438,8 @@ ENVIRONMENT VARIABLES:
   DOCKER_REPO   Docker repository (default: aztecprotocol/aztec)
 
 EOF
-          exit 0
-          ;;
-        -*)
-          echo "Unknown option: $1"
-          echo "Run 'aztec new --help' for usage information"
-          exit 1
-          ;;
-        *)
-          # This should be the PATH argument
-          PROJECT_PATH="$1"
-          NARGO_ARGS+=("$1")
-          shift
-          ;;
-      esac
-    done
+      exit 0
+    fi
 
     # Check if PATH was provided
     if [ -z "$PROJECT_PATH" ]; then
@@ -385,11 +449,7 @@ EOF
       exit 1
     fi
 
-    # Default to --contract if no type flag was provided
-    if [ "$HAS_TYPE_FLAG" = false ]; then
-      NARGO_ARGS+=("--contract")
-      IS_CONTRACT=true
-    fi
+    validate_working_directory
 
     echo "Creating new Noir project at $PROJECT_PATH..."
 
@@ -402,74 +462,24 @@ EOF
       exit 1
     fi
 
-    # We add the aztec dependency to the Nargo.toml file only for contract projects.
-    # Makes sense to do here and not directly in `nargo new` command because in `nargo`
-    # we don't know what version of Aztec.nr to use.
+    # Setup Aztec contract project (add dependency and create template)
     if [ "$IS_CONTRACT" = true ]; then
-      # Get the actual aztec version for the git tag
-      AZTEC_VERSION=$(docker run --rm --entrypoint=node $DOCKER_REPO:$VERSION --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js --version 2>/dev/null | tr -d '\n\r')
-
-      if [ -f "$PROJECT_PATH/Nargo.toml" ]; then
-        echo "" >> "$PROJECT_PATH/Nargo.toml"
-        echo "aztec = { git=\"https://github.com/AztecProtocol/aztec-packages/\", tag=\"v${AZTEC_VERSION}\", directory=\"noir-projects/aztec-nr/aztec\" }" >> "$PROJECT_PATH/Nargo.toml"
-        echo "Added aztec dependency (v${AZTEC_VERSION}) to Nargo.toml"
-      else
-        >&2 echo "Warning: Could not find Nargo.toml at $PROJECT_PATH/Nargo.toml to add aztec dependency"
-      fi
-
-      # Replace the contents of main.nr with the Aztec contract template
-      if [ -f "$PROJECT_PATH/src/main.nr" ]; then
-        cat > "$PROJECT_PATH/src/main.nr" << 'EOF'
-use aztec::macros::aztec;
-
-#[aztec]
-contract Main {}
-EOF
-        echo "Created main.nr with Aztec contract template"
-      else
-        >&2 echo "Warning: Could not find main.nr at $PROJECT_PATH/src/main.nr"
-      fi
+      setup_aztec_contract_project "$PROJECT_PATH"
     fi
     ;;
   init)
     shift
 
-    validate_working_directory
-
-    # Build nargo init command arguments
-    NARGO_ARGS=("init")
-
     # Parse arguments
     # Note: I allow devs to use the `aztec` command to also create bin and lib projects because we currently rely
     # on the dockerized nargo and I am not sure if it's expected they will have a native nargo on path. If we decide
     # to use native nargo I think we can just hardcode --contract here and not bother with the other options.
-    HAS_TYPE_FLAG=false
-    IS_CONTRACT=false
-    while [ "$#" -gt 0 ]; do
-      case $1 in
-        --name)
-          NARGO_ARGS+=("--name" "$2")
-          shift 2
-          ;;
-        --lib)
-          NARGO_ARGS+=("--lib")
-          HAS_TYPE_FLAG=true
-          shift
-          ;;
-        --bin)
-          NARGO_ARGS+=("--bin")
-          HAS_TYPE_FLAG=true
-          shift
-          ;;
-        --contract)
-          NARGO_ARGS+=("--contract")
-          HAS_TYPE_FLAG=true
-          IS_CONTRACT=true
-          shift
-          ;;
-        --help|-h)
-          # Show help for aztec init
-          cat << 'EOF'
+    parse_project_flags_and_build_nargo_args "init" "$@"
+    PARSE_RESULT=$?
+
+    # Handle help request
+    if [ $PARSE_RESULT -eq 2 ]; then
+      cat << 'EOF'
 Aztec Init - Create a new Aztec Noir project in the current directory
 
 Usage: aztec init [OPTIONS]
@@ -490,29 +500,12 @@ ENVIRONMENT VARIABLES:
   DOCKER_REPO   Docker repository (default: aztecprotocol/aztec)
 
 EOF
-          exit 0
-          ;;
-        -*)
-          echo "Unknown option: $1"
-          echo "Run 'aztec init --help' for usage information"
-          exit 1
-          ;;
-        *)
-          NARGO_ARGS+=("$1")
-          shift
-          ;;
-      esac
-    done
-
-    # Default to --contract if no type flag was provided
-    if [ "$HAS_TYPE_FLAG" = false ]; then
-      NARGO_ARGS+=("--contract")
-      IS_CONTRACT=true
+      exit 0
     fi
 
-    echo "Initializing Noir project..."
-
     validate_working_directory
+
+    echo "Initializing Noir project..."
 
     # Run nargo init via docker
     run_nargo "${NARGO_ARGS[@]}"
@@ -523,33 +516,9 @@ EOF
       exit 1
     fi
 
-    # We add the aztec dependency to the Nargo.toml file only for contract projects.
-    # Makes sense to do here and not directly in `nargo init` command because in `nargo`
-    # we don't know what version of Aztec.nr to use.
+    # Setup Aztec contract project (add dependency and create template)
     if [ "$IS_CONTRACT" = true ]; then
-      # Get the actual aztec version for the git tag
-      AZTEC_VERSION=$(docker run --rm --entrypoint=node $DOCKER_REPO:$VERSION --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js --version 2>/dev/null | tr -d '\n\r')
-
-      if [ -f "Nargo.toml" ]; then
-        echo "" >> "Nargo.toml"
-        echo "aztec = { git=\"https://github.com/AztecProtocol/aztec-packages/\", tag=\"v${AZTEC_VERSION}\", directory=\"noir-projects/aztec-nr/aztec\" }" >> "Nargo.toml"
-        echo "Added aztec dependency (v${AZTEC_VERSION}) to Nargo.toml"
-      else
-        >&2 echo "Warning: Could not find Nargo.toml to add aztec dependency"
-      fi
-
-      # Replace the contents of main.nr with the Aztec contract template
-      if [ -f "src/main.nr" ]; then
-        cat > "src/main.nr" << 'EOF'
-use aztec::macros::aztec;
-
-#[aztec]
-contract Main {}
-EOF
-        echo "Created main.nr with Aztec contract template"
-      else
-        >&2 echo "Warning: Could not find main.nr at src/main.nr"
-      fi
+      setup_aztec_contract_project "."
     fi
     ;;
   fmt)
