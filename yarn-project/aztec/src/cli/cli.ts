@@ -45,7 +45,6 @@ export function injectAztecCommands(program: Command, userLog: LogFn, debugLogge
         --bin               Use a binary template
       Examples:
         $ aztec init                    # creates a contract project in current directory
-        $ aztec init my-project         # creates a contract project in ./my-project
         $ aztec init --lib              # creates a library project
 
     new <path> [options]: creates a new Noir project in a new directory
