@@ -3,7 +3,9 @@ source $(git rev-parse --show-toplevel)/ci3/source_bootstrap
 
 cmd=${1:-}
 
-export AZTEC=$PWD/../aztec-up/bin/aztec
+# Use wrapper script to ensure unique container names when building boxes in parallel
+export AZTEC_BIN=$PWD/../aztec-up/bin/aztec
+export AZTEC=$PWD/aztec-wrapper.sh
 
 hash=$(hash_str \
   $(../noir/bootstrap.sh hash) \
