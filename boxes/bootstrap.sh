@@ -3,6 +3,8 @@ source $(git rev-parse --show-toplevel)/ci3/source_bootstrap
 
 cmd=${1:-}
 
+export AZTEC=$PWD/../aztec-up/bin/aztec
+
 hash=$(hash_str \
   $(../noir/bootstrap.sh hash) \
   $(cache_content_hash \

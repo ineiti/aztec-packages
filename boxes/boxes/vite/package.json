@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "compile": "cd src/contracts && ${AZTEC:-aztec} compile --silence-warnings",
-    "codegen": "${AZTEC_BUILDER:-aztec} codegen src/contracts/target -o artifacts",
+    "codegen": "${AZTEC:-aztec} codegen src/contracts/target -o artifacts",
     "clean": "rm -rf ./dist .tsbuildinfo ./codegenCache.json ./artifacts ./src/contracts/target",
     "prep": "yarn clean && yarn compile && yarn codegen",
     "build": "yarn prep && tsc -b && vite build",
