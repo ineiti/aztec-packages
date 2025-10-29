@@ -58,7 +58,7 @@ export async function createPXE(
     ? loggers.prover
     : createLogger('pxe:bb:native' + (logSuffix ? `:${logSuffix}` : ''));
 
-  const prover = options.prover ?? (await createProver(config, simulator, proverLogger));
+  const prover = options.prover ?? createProver(config, simulator, proverLogger);
   const protocolContractsProvider = new BundledProtocolContractsProvider();
 
   const pxeLogger = loggers.pxe ? loggers.pxe : createLogger('pxe:service' + (logSuffix ? `:${logSuffix}` : ''));
@@ -79,5 +79,5 @@ function createProver(
   simulator: CircuitSimulator,
   logger?: Logger,
 ) {
-  return new BBBundlePrivateKernelProver(simulator, 16, logger);
+  return new BBBundlePrivateKernelProver(simulator, logger);
 }

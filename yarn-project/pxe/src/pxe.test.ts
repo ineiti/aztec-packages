@@ -1,3 +1,4 @@
+import { BBBundlePrivateKernelProver } from '@aztec/bb-prover/client/bundle';
 import type { L1ContractAddresses } from '@aztec/ethereum/l1-contract-addresses';
 import { omit } from '@aztec/foundation/collection';
 import { EthAddress } from '@aztec/foundation/eth-address';
@@ -16,7 +17,6 @@ import {
 
 import { mock } from 'jest-mock-extended';
 
-import { BBWASMBundlePrivateKernelProver } from '../../bb-prover/dest/prover/client/bundle.js';
 import type { PXEConfig } from './config/index.js';
 import { PXE } from './pxe.js';
 
@@ -27,7 +27,7 @@ describe('PXE', () => {
     const kvStore = await openTmpStore('test');
     const node = mock<AztecNode>();
     const simulator = new WASMSimulator();
-    const kernelProver = new BBWASMBundlePrivateKernelProver(simulator);
+    const kernelProver = new BBBundlePrivateKernelProver(simulator);
     const protocolContractsProvider = new BundledProtocolContractsProvider();
     const config: PXEConfig = {
       l2BlockBatchSize: 50,

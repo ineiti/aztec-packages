@@ -1,3 +1,4 @@
+import { BBBundlePrivateKernelProver } from '@aztec/bb-prover/client/bundle';
 import { randomBytes } from '@aztec/foundation/crypto';
 import { createLogger } from '@aztec/foundation/log';
 import { createStore } from '@aztec/kv-store/indexeddb';
@@ -5,7 +6,6 @@ import { BundledProtocolContractsProvider } from '@aztec/protocol-contracts/prov
 import { WASMSimulator } from '@aztec/simulator/client';
 import type { AztecNode } from '@aztec/stdlib/interfaces/client';
 
-import { BBWASMBundlePrivateKernelProver } from '../../../../../bb-prover/dest/prover/client/bundle.js';
 import type { PXEConfig } from '../../../config/index.js';
 import { PXE } from '../../../pxe.js';
 import type { PXECreationOptions } from '../../pxe_creation_options.js';
@@ -49,7 +49,7 @@ export async function createPXE(
     ? loggers.prover
     : createLogger('pxe:bb:wasm:bundle' + (logSuffix ? `:${logSuffix}` : ''));
 
-  const prover = options.prover ?? new BBWASMBundlePrivateKernelProver(simulator, 16, proverLogger);
+  const prover = options.prover ?? new BBBundlePrivateKernelProver(simulator, proverLogger);
   const protocolContractsProvider = new BundledProtocolContractsProvider();
 
   const pxeLogger = loggers.pxe ? loggers.pxe : createLogger('pxe:service' + (logSuffix ? `:${logSuffix}` : ''));
