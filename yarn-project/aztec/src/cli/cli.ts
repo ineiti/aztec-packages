@@ -40,21 +40,20 @@ export function injectAztecCommands(program: Command, userLog: LogFn, debugLogge
     init [folder] [options]: creates a new Noir project
       Options:
         --name <name>       Name of the package
+        --contract          Use a contract template (default)
         --lib               Use a library template
         --bin               Use a binary template
-        --contract          Use a contract template (default)
       Examples:
         $ aztec init                    # creates a contract project in current directory
         $ aztec init my-project         # creates a contract project in ./my-project
         $ aztec init --lib              # creates a library project
 
-    new <path> [options]: creates a new Aztec Noir project in a new directory
-      Creates a new project using nargo and automatically adds the Aztec.nr dependency.
+    new <path> [options]: creates a new Noir project in a new directory
       Options:
         --name <name>       Name of the package
+        --contract          Use a contract template (default)
         --lib               Use a library template
         --bin               Use a binary template
-        --contract          Use a contract template (default)
       Examples:
         $ aztec new my-project          # creates a contract project in ./my-project
         $ aztec new my-lib --lib        # creates a library project in ./my-lib
@@ -85,8 +84,7 @@ export function injectAztecCommands(program: Command, userLog: LogFn, debugLogge
       Example:
         $ aztec lsp                     # starts the LSP server
 
-    preload-crs: preload the points data needed for proving and verifying
-      Downloads and caches the Common Reference String (CRS) data required for zero-knowledge proofs.
+    preload-crs: Downloads and caches the Common Reference String (CRS) data required for zero-knowledge proofs.
       Example:
         $ aztec preload-crs             # preloads CRS data
     `,
