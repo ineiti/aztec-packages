@@ -416,6 +416,19 @@ EOF
       else
         >&2 echo "Warning: Could not find Nargo.toml at $PROJECT_PATH/Nargo.toml to add aztec dependency"
       fi
+
+      # Replace the contents of main.nr with the Aztec contract template
+      if [ -f "$PROJECT_PATH/src/main.nr" ]; then
+        cat > "$PROJECT_PATH/src/main.nr" << 'EOF'
+use aztec::macros::aztec;
+
+#[aztec]
+contract Main {}
+EOF
+        echo "Created main.nr with Aztec contract template"
+      else
+        >&2 echo "Warning: Could not find main.nr at $PROJECT_PATH/src/main.nr"
+      fi
     fi
     ;;
   init)
@@ -523,6 +536,19 @@ EOF
         echo "Added aztec dependency (v${AZTEC_VERSION}) to Nargo.toml"
       else
         >&2 echo "Warning: Could not find Nargo.toml to add aztec dependency"
+      fi
+
+      # Replace the contents of main.nr with the Aztec contract template
+      if [ -f "src/main.nr" ]; then
+        cat > "src/main.nr" << 'EOF'
+use aztec::macros::aztec;
+
+#[aztec]
+contract Main {}
+EOF
+        echo "Created main.nr with Aztec contract template"
+      else
+        >&2 echo "Warning: Could not find main.nr at src/main.nr"
       fi
     fi
     ;;
