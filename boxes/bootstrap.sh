@@ -3,12 +3,6 @@ source $(git rev-parse --show-toplevel)/ci3/source_bootstrap
 
 cmd=${1:-}
 
-export TRANSPILER=$PWD/../avm-transpiler/target/release/avm-transpiler
-export BB=$PWD/../barretenberg/cpp/build/bin/bb
-export NARGO=$PWD/../noir/noir-repo/target/release/nargo
-export AZTEC=$PWD/../aztec-up/bin/aztec
-export AZTEC_BUILDER=$PWD/../yarn-project/builder/aztec-builder-dest
-
 hash=$(hash_str \
   $(../noir/bootstrap.sh hash) \
   $(cache_content_hash \
@@ -19,6 +13,9 @@ hash=$(hash_str \
 function build {
   echo_header "boxes build"
   npm_install_deps
+
+  # Set VERSION to latest if not defined (required by the aztec command used by yarn build)
+  export VERSION=${VERSION:-latest}
 
   if ! cache_download boxes-$hash.tar.gz; then
     denoise 'yarn build'
