@@ -27,7 +27,7 @@ import { NFTBridgeContract } from '../contracts/aztec/artifacts/NFTBridge.js';
         transport: http('http://localhost:8545'),
     });
 
-    // Setup L2 using Aztec's sandbox and one of its initial accounts
+    // Setup L2 using Aztec's local network and one of its initial accounts
     console.log('🔮 Setting up L2...\n');
     const node = createAztecNodeClient("http://localhost:8080");
     const aztecWallet = await TestWallet.create(node);

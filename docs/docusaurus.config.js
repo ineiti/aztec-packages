@@ -194,8 +194,8 @@ const config = {
             label: "Run a node",
           },
           {
-            to: "/developers/getting_started_on_sandbox",
-            label: "Install Sandbox",
+            to: "/developers/getting_started_on_local_network",
+            label: "Install Local Network",
             position: "right",
           },
           {
