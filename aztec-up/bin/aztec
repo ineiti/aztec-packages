@@ -312,6 +312,7 @@ EOF
     # on the dockerized nargo and I am not sure if it's expected they will have a native nargo on path. If we decide
     # to use native nargo I think we can just hardcode --contract here and not bother with the other options.
     HAS_TYPE_FLAG=false
+    IS_CONTRACT=false
     while [ "$#" -gt 0 ]; do
       case $1 in
         --name)
@@ -331,6 +332,7 @@ EOF
         --contract)
           NARGO_ARGS+=("--contract")
           HAS_TYPE_FLAG=true
+          IS_CONTRACT=true
           shift
           ;;
         --help|-h)
@@ -386,6 +388,7 @@ EOF
     # Default to --contract if no type flag was provided
     if [ "$HAS_TYPE_FLAG" = false ]; then
       NARGO_ARGS+=("--contract")
+      IS_CONTRACT=true
     fi
 
     echo "Creating new Noir project at $PROJECT_PATH..."
@@ -399,18 +402,20 @@ EOF
       exit 1
     fi
 
-    # We add the aztec dependency to the Nargo.toml file. Makes sense to do here and not directly in `nargo new`
-    # command because in `nargo` we don't know what version of Aztec.nr to use.
+    # We add the aztec dependency to the Nargo.toml file only for contract projects.
+    # Makes sense to do here and not directly in `nargo new` command because in `nargo`
+    # we don't know what version of Aztec.nr to use.
+    if [ "$IS_CONTRACT" = true ]; then
+      # Get the actual aztec version for the git tag
+      AZTEC_VERSION=$(docker run --rm --entrypoint=node $DOCKER_REPO:$VERSION --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js --version 2>/dev/null | tr -d '\n\r')
 
-    # Get the actual aztec version for the git tag
-    AZTEC_VERSION=$(docker run --rm --entrypoint=node $DOCKER_REPO:$VERSION --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js --version 2>/dev/null | tr -d '\n\r')
-
-    if [ -f "$PROJECT_PATH/Nargo.toml" ]; then
-      echo "" >> "$PROJECT_PATH/Nargo.toml"
-      echo "aztec = { git=\"https://github.com/AztecProtocol/aztec-packages/\", tag=\"v${AZTEC_VERSION}\", directory=\"noir-projects/aztec-nr/aztec\" }" >> "$PROJECT_PATH/Nargo.toml"
-      echo "Added aztec dependency (v${AZTEC_VERSION}) to Nargo.toml"
-    else
-      >&2 echo "Warning: Could not find Nargo.toml at $PROJECT_PATH/Nargo.toml to add aztec dependency"
+      if [ -f "$PROJECT_PATH/Nargo.toml" ]; then
+        echo "" >> "$PROJECT_PATH/Nargo.toml"
+        echo "aztec = { git=\"https://github.com/AztecProtocol/aztec-packages/\", tag=\"v${AZTEC_VERSION}\", directory=\"noir-projects/aztec-nr/aztec\" }" >> "$PROJECT_PATH/Nargo.toml"
+        echo "Added aztec dependency (v${AZTEC_VERSION}) to Nargo.toml"
+      else
+        >&2 echo "Warning: Could not find Nargo.toml at $PROJECT_PATH/Nargo.toml to add aztec dependency"
+      fi
     fi
     ;;
   init)
@@ -426,6 +431,7 @@ EOF
     # on the dockerized nargo and I am not sure if it's expected they will have a native nargo on path. If we decide
     # to use native nargo I think we can just hardcode --contract here and not bother with the other options.
     HAS_TYPE_FLAG=false
+    IS_CONTRACT=false
     while [ "$#" -gt 0 ]; do
       case $1 in
         --name)
@@ -445,6 +451,7 @@ EOF
         --contract)
           NARGO_ARGS+=("--contract")
           HAS_TYPE_FLAG=true
+          IS_CONTRACT=true
           shift
           ;;
         *)
@@ -457,6 +464,7 @@ EOF
     # Default to --contract if no type flag was provided
     if [ "$HAS_TYPE_FLAG" = false ]; then
       NARGO_ARGS+=("--contract")
+      IS_CONTRACT=true
     fi
 
     echo "Initializing Noir project..."
@@ -472,18 +480,20 @@ EOF
       exit 1
     fi
 
-    # We add the aztec dependency to the Nargo.toml file. Makes sense to do here and not directly in `nargo init`
-    # command because in `nargo` we don't know what version of Aztec.nr to use.
+    # We add the aztec dependency to the Nargo.toml file only for contract projects.
+    # Makes sense to do here and not directly in `nargo init` command because in `nargo`
+    # we don't know what version of Aztec.nr to use.
+    if [ "$IS_CONTRACT" = true ]; then
+      # Get the actual aztec version for the git tag
+      AZTEC_VERSION=$(docker run --rm --entrypoint=node $DOCKER_REPO:$VERSION --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js --version 2>/dev/null | tr -d '\n\r')
 
-    # Get the actual aztec version for the git tag
-    AZTEC_VERSION=$(docker run --rm --entrypoint=node $DOCKER_REPO:$VERSION --no-warnings /usr/src/yarn-project/aztec/dest/bin/index.js --version 2>/dev/null | tr -d '\n\r')
-
-    if [ -f "Nargo.toml" ]; then
-      echo "" >> "Nargo.toml"
-      echo "aztec = { git=\"https://github.com/AztecProtocol/aztec-packages/\", tag=\"v${AZTEC_VERSION}\", directory=\"noir-projects/aztec-nr/aztec\" }" >> "Nargo.toml"
-      echo "Added aztec dependency (v${AZTEC_VERSION}) to Nargo.toml"
-    else
-      >&2 echo "Warning: Could not find Nargo.toml to add aztec dependency"
+      if [ -f "Nargo.toml" ]; then
+        echo "" >> "Nargo.toml"
+        echo "aztec = { git=\"https://github.com/AztecProtocol/aztec-packages/\", tag=\"v${AZTEC_VERSION}\", directory=\"noir-projects/aztec-nr/aztec\" }" >> "Nargo.toml"
+        echo "Added aztec dependency (v${AZTEC_VERSION}) to Nargo.toml"
+      else
+        >&2 echo "Warning: Could not find Nargo.toml to add aztec dependency"
+      fi
     fi
     ;;
   fmt)
