@@ -159,7 +159,6 @@ rm -rf $BIN_PATH && mkdir -p $BIN_PATH
 install_bin .aztec-run
 install_bin aztec
 install_bin aztec-up
-install_bin aztec-postprocess-contract
 install_bin aztec-wallet
 mv "$TMP_VERSION_FILE" "$AZTEC_PATH/default_version"
 
