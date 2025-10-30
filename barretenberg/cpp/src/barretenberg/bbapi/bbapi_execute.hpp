@@ -111,7 +111,8 @@ using CommandResponse = NamedUnion<CircuitProve::Response,
                                    EcdsaSecp256r1VerifySignature::Response,
                                    SrsInitSrs::Response,
                                    SrsInitGrumpkinSrs::Response,
-                                   Shutdown::Response>;
+                                   Shutdown::Response,
+                                   ErrorResponse>;
 
 /**
  * @brief Executes a command by visiting a variant of all possible commands.

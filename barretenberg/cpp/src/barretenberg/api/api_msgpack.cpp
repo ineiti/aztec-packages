@@ -269,8 +269,18 @@ int execute_msgpack_ipc_server(std::unique_ptr<ipc::IpcServer> server)
             // Re-throw shutdown request
             throw;
         } catch (const std::exception& e) {
+            // Log error to stderr for debugging (goes to log file if logger enabled)
             std::cerr << "Error processing request from client " << client_id << ": " << e.what() << '\n';
-            return {};
+            std::cerr.flush();
+
+            // Create error response with exception message
+            bb::bbapi::ErrorResponse error_response{ .message = std::string(e.what()) };
+            bb::bbapi::CommandResponse response = error_response;
+
+            // Serialize and return error response to client
+            msgpack::sbuffer response_buffer;
+            msgpack::pack(response_buffer, response);
+            return std::vector<uint8_t>(response_buffer.data(), response_buffer.data() + response_buffer.size());
         }
     });
 

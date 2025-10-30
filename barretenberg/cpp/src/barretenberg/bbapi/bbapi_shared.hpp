@@ -167,4 +167,19 @@ struct Shutdown {
     bool operator==(const Shutdown&) const = default;
 };
 
+/**
+ * @struct ErrorResponse
+ * @brief Error response returned when command execution fails
+ *
+ * This response type is used to propagate C++ exceptions across the IPC boundary,
+ * allowing TypeScript clients to receive detailed error messages instead of
+ * generic "process exited" errors.
+ */
+struct ErrorResponse {
+    static constexpr const char MSGPACK_SCHEMA_NAME[] = "ErrorResponse";
+    std::string message;
+    MSGPACK_FIELDS(message);
+    bool operator==(const ErrorResponse& other) const = default;
+};
+
 } // namespace bb::bbapi

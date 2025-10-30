@@ -577,6 +577,10 @@ ${conversions}
       // Add BbApiBase interface
       neededImports.add('BbApiBase');
 
+      // Always add ErrorResponse and toErrorResponse for error handling
+      neededImports.add('ErrorResponse');
+      neededImports.add('toErrorResponse');
+
       if (neededImports.size > 0) {
         const sortedImports = Array.from(neededImports).sort();
         // Remove duplicates
@@ -674,6 +678,9 @@ ${destroyMethod}
       return `  ${name}(command: ${commandType}): Promise<${responseType}> {
     const msgpackCommand = from${commandType}(command);
     return msgpackCall(this.backend, [["${capitalize(name)}", msgpackCommand]]).then(([variantName, result]: [string, any]) => {
+      if (variantName === 'ErrorResponse') {
+        throw new Error(toErrorResponse(result).message);
+      }
       if (variantName !== '${responseType}') {
         throw new Error(\`Expected variant name '${responseType}' but got '\${variantName}'\`);
       }
@@ -686,6 +693,9 @@ ${destroyMethod}
     return `  ${name}(command: ${commandType}): ${responseType} {
     const msgpackCommand = from${commandType}(command);
     const [variantName, result] = msgpackCall(this.backend, [["${capitalize(name)}", msgpackCommand]]);
+    if (variantName === 'ErrorResponse') {
+      throw new Error(toErrorResponse(result).message);
+    }
     if (variantName !== '${responseType}') {
       throw new Error(\`Expected variant name '${responseType}' but got '\${variantName}'\`);
     }
