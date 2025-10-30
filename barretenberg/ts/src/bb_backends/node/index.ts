@@ -84,7 +84,12 @@ export async function createSyncBackend(
         throw new Error('Native sync backend requires napi client stub.');
       }
       logger(`Using native shared memory backend: ${bbPath}`);
-      const shm = await BarretenbergNativeShmSyncBackend.new(bbPath, options.threads, options.maxClients);
+      const shm = await BarretenbergNativeShmSyncBackend.new(
+        bbPath,
+        options.threads,
+        options.maxClients,
+        options.logger,
+      );
       return new BarretenbergSync(shm);
     }
 

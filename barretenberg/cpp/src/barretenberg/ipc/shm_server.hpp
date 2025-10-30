@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstring>
 #include <fcntl.h>
+#include <iostream>
 #include <optional>
 #include <string>
 #include <sys/mman.h>
@@ -138,8 +139,16 @@ class ShmServer : public IpcServer {
             return {}; // Client disconnected or error
         }
 
+        // Handle implicit padding: if we get less than 4 bytes, it's padding at ring wrap boundary
+        // Release it and retry
         if (n < sizeof(uint32_t)) {
-            throw_or_abort("Ring buffer corruption: insufficient bytes for length prefix");
+            consumer_->release(client_idx, n);
+            // Retry peek after releasing padding
+            data = consumer_->peek(client_idx, &n);
+            if (data == nullptr || n < sizeof(uint32_t)) {
+                // Still no valid data after skipping padding
+                return {};
+            }
         }
 
         // Read length prefix

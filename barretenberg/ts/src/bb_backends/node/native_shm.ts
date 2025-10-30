@@ -1,5 +1,6 @@
 import { createRequire } from 'module';
 import { spawn, ChildProcess } from 'child_process';
+import { openSync, closeSync } from 'fs';
 import { IMsgpackBackendSync } from '../interface.js';
 import { findNapiBinary, findPackageRoot } from './platform.js';
 import readline from 'readline';
@@ -33,10 +34,12 @@ try {
 export class BarretenbergNativeShmSyncBackend implements IMsgpackBackendSync {
   private process: ChildProcess;
   private client: any; // NAPI MsgpackClient instance
+  private logFd?: number; // File descriptor for logs
 
-  private constructor(process: ChildProcess, client: any) {
+  private constructor(process: ChildProcess, client: any, logFd?: number) {
     this.process = process;
     this.client = client;
+    this.logFd = logFd;
   }
 
   /**
@@ -65,20 +68,24 @@ export class BarretenbergNativeShmSyncBackend implements IMsgpackBackendSync {
     const hwc = threads ? threads.toString() : '1';
     const env = { ...process.env, HARDWARE_CONCURRENCY: '1' };
 
+    // Set up file logging if logger is provided.
+    // Direct file redirection bypasses Node event loop - logs are written even if process hangs.
+    let logFd: number | undefined;
+    let logPath: string | undefined;
+    if (logger) {
+      logPath = `/tmp/${shmName}.log`;
+      logFd = openSync(logPath, 'w');
+      logger(`BB process logs redirected to: ${logPath}`);
+    }
+
     // Spawn bb process with shared memory mode
     const args = [bbBinaryPath, 'msgpack', 'run', '--input', `${shmName}.shm`, '--max-clients', clientCount.toString()];
     const bbProcess = spawn(findPackageRoot() + '/scripts/kill_wrapper.sh', args, {
-      stdio: ['ignore', logger ? 'pipe' : 'ignore', logger ? 'pipe' : 'ignore'],
+      stdio: ['ignore', logFd ?? 'ignore', logFd ?? 'ignore'],
       env,
     });
     // Disconnect from event loop so process can exit. The kill wrapper will reap bb once parent (node) dies.
     bbProcess.unref();
-
-    if (logger) {
-      logger("Logger attached to bb process. DON'T FORGET TO DESTROY THE BACKEND to allow Node.js to exit.");
-      readline.createInterface({ input: bbProcess.stdout! }).on('line', logger);
-      readline.createInterface({ input: bbProcess.stderr! }).on('line', logger);
-    }
 
     // Track if process has exited
     let processExited = false;
@@ -137,12 +144,19 @@ export class BarretenbergNativeShmSyncBackend implements IMsgpackBackendSync {
         throw new Error('Failed to create client connection');
       }
 
-      return new BarretenbergNativeShmSyncBackend(bbProcess, client);
+      return new BarretenbergNativeShmSyncBackend(bbProcess, client, logFd);
     } finally {
-      // If we failed to connect, ensure the process is killed
+      // If we failed to connect, ensure the process is killed and log file closed
       // kill() returns false if process already exited, but doesn't throw
       if (!client) {
         bbProcess.kill('SIGKILL');
+        if (logFd !== undefined) {
+          try {
+            closeSync(logFd);
+          } catch (e) {
+            // Ignore errors during cleanup
+          }
+        }
       }
     }
   }
@@ -160,6 +174,13 @@ export class BarretenbergNativeShmSyncBackend implements IMsgpackBackendSync {
     if (this.client) {
       try {
         this.client.close();
+      } catch (e) {
+        // Ignore errors during cleanup
+      }
+    }
+    if (this.logFd !== undefined) {
+      try {
+        closeSync(this.logFd);
       } catch (e) {
         // Ignore errors during cleanup
       }

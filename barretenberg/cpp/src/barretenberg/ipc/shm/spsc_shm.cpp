@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstring>
 #include <fcntl.h>
+#include <iostream>
 #include <stdexcept>
 #include <string>
 #include <sys/mman.h>
@@ -307,21 +308,33 @@ void* SpscShm::peek(size_t* n)
         uint64_t till_end = cap - pos;
         size_t grant = static_cast<size_t>((avail <= till_end) ? avail : till_end);
 
-        // Check for padding marker (zero-length message)
-        if (grant >= sizeof(uint32_t)) {
-            uint32_t marker = 0;
-            std::memcpy(&marker, buf_ + pos, sizeof(uint32_t));
-            if (marker == 0) {
-                // This is padding - skip it by releasing and continuing
-                ctrl_->tail.store(tail + grant, std::memory_order_release);
+        // If we don't have enough bytes to even read a padding marker, treat as implicit padding
+        // This happens when the producer wrapped and left < 4 bytes at the end
+        if (grant < sizeof(uint32_t)) {
+            // Skip to wrap point
+            ctrl_->tail.store(tail + grant, std::memory_order_release);
 
-                // Wake producer if ring was full
-                if (avail == cap) {
-                    ctrl_->space_seq.fetch_add(1, std::memory_order_release);
-                    futex_wake(reinterpret_cast<volatile uint32_t*>(&ctrl_->space_seq), 1);
-                }
-                continue; // Try again from wrapped position
+            // Wake producer if ring was full
+            if (avail == cap) {
+                ctrl_->space_seq.fetch_add(1, std::memory_order_release);
+                futex_wake(reinterpret_cast<volatile uint32_t*>(&ctrl_->space_seq), 1);
             }
+            continue; // Try again from wrapped position
+        }
+
+        // Check for explicit padding marker (zero-length message)
+        uint32_t marker = 0;
+        std::memcpy(&marker, buf_ + pos, sizeof(uint32_t));
+        if (marker == 0) {
+            // This is padding - skip it by releasing and continuing
+            ctrl_->tail.store(tail + grant, std::memory_order_release);
+
+            // Wake producer if ring was full
+            if (avail == cap) {
+                ctrl_->space_seq.fetch_add(1, std::memory_order_release);
+                futex_wake(reinterpret_cast<volatile uint32_t*>(&ctrl_->space_seq), 1);
+            }
+            continue; // Try again from wrapped position
         }
 
         // Not padding - return the data

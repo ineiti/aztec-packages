@@ -1,3 +1,4 @@
+import { BackendType, BarretenbergSync } from '@aztec/bb.js';
 import { type ContractArtifact, FunctionType } from '@aztec/stdlib/abi';
 import { AztecAddress } from '@aztec/stdlib/aztec-address';
 import {
@@ -61,7 +62,7 @@ describe('Contract Class', () => {
         returnTypes: [],
         errorTypes: {},
         bytecode: Buffer.alloc(8, 0xfa),
-        verificationKey: 'fake-verification-key',
+        verificationKey: Buffer.alloc(4064).toString('base64'),
       },
       {
         name: 'public_dispatch',
