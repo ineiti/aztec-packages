@@ -1,4 +1,3 @@
-import { BackendType, BarretenbergSync } from '@aztec/bb.js';
 import { type ContractArtifact, FunctionType } from '@aztec/stdlib/abi';
 import { AztecAddress } from '@aztec/stdlib/aztec-address';
 import {
