@@ -591,10 +591,6 @@ ${conversions}
       // Add BbApiBase interface
       neededImports.add('BbApiBase');
 
-      // Always add ErrorResponse and toErrorResponse for error handling
-      neededImports.add('ErrorResponse');
-      neededImports.add('toErrorResponse');
-
       if (neededImports.size > 0) {
         const sortedImports = Array.from(neededImports).sort();
         // Remove duplicates
