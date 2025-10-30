@@ -42,8 +42,8 @@ async function proveMockPublicBaseRollup(
   avmCircuitInputs: AvmCircuitInputs,
   bbWorkingDirectory: string,
   bbBinaryPath: string,
-  clientIVCPublicInputs: KernelPublicInputs,
-  civcProof: RecursiveProof<typeof CHONK_PROOF_LENGTH>,
+  chonkPublicInputs: KernelPublicInputs,
+  chonkProof: RecursiveProof<typeof CHONK_PROOF_LENGTH>,
   skipPublicInputsValidation: boolean = false,
 ) {
   const { vk, proof, publicInputs } = await proveAvm(
@@ -60,7 +60,7 @@ async function proveMockPublicBaseRollup(
   const baseWitnessResult = await witnessGenMockPublicBaseCircuit({
     chonk_proof_data: {
       public_inputs: chonkPublicInputs,
-      proof: mapRecursiveProofToNoir(chonkProof.proof),
+      proof: mapRecursiveProofToNoir(chonkProof),
       vk_data: mapVerificationKeyToNoir(chonkVk, CHONK_VK_LENGTH_IN_FIELDS),
     },
     verification_key: mapVerificationKeyToNoir(vk, AVM_V2_VERIFICATION_KEY_LENGTH_IN_FIELDS_PADDED),
