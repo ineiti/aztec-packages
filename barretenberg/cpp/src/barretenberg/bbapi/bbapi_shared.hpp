@@ -7,7 +7,7 @@
  * including circuit input types and proof system settings.
  */
 
-#include "barretenberg/client_ivc/sumcheck_client_ivc.hpp"
+#include "barretenberg/chonk/chonk.hpp"
 #include "barretenberg/dsl/acir_format/acir_format.hpp"
 #include "barretenberg/honk/execution_trace/mega_execution_trace.hpp"
 #include <cstdint>
@@ -28,7 +28,7 @@ enum class VkPolicy {
 
 /**
  * @struct CircuitInputNoVK
- * @brief A circuit to be used in either ultrahonk or chonk (SumcheckClientIVC+honk) verification key derivation.
+ * @brief A circuit to be used in either ultrahonk or chonk verification key derivation.
  */
 struct CircuitInputNoVK {
     /**
@@ -53,7 +53,7 @@ struct CircuitInputNoVK {
 
 /**
  * @struct CircuitInput
- * @brief A circuit to be used in either ultrahonk or SumcheckClientIVC-honk proving.
+ * @brief A circuit to be used in either ultrahonk or Chonk proving.
  */
 struct CircuitInput {
     /**
@@ -152,7 +152,28 @@ struct BBApiRequest {
     std::vector<uint8_t> loaded_circuit_vk;
     // Policy for handling verification keys during accumulation
     VkPolicy vk_policy = VkPolicy::DEFAULT;
+    // Error message - empty string means no error
+    std::string error_message;
 };
+
+/**
+ * @brief Error response returned when a command fails
+ */
+struct ErrorResponse {
+    static constexpr const char MSGPACK_SCHEMA_NAME[] = "ErrorResponse";
+    std::string message;
+    MSGPACK_FIELDS(message);
+    bool operator==(const ErrorResponse&) const = default;
+};
+
+/**
+ * @brief Macro to set error in BBApiRequest and return default response
+ */
+#define BBAPI_ERROR(request, msg)                                                                                      \
+    do {                                                                                                               \
+        (request).error_message = (msg);                                                                               \
+        return {};                                                                                                     \
+    } while (0)
 
 struct Shutdown {
     static constexpr const char MSGPACK_SCHEMA_NAME[] = "Shutdown";
@@ -165,21 +186,6 @@ struct Shutdown {
     void msgpack(auto&& pack_fn) { pack_fn(); }
     Response execute(const BBApiRequest&) && { return {}; }
     bool operator==(const Shutdown&) const = default;
-};
-
-/**
- * @struct ErrorResponse
- * @brief Error response returned when command execution fails
- *
- * This response type is used to propagate C++ exceptions across the IPC boundary,
- * allowing TypeScript clients to receive detailed error messages instead of
- * generic "process exited" errors.
- */
-struct ErrorResponse {
-    static constexpr const char MSGPACK_SCHEMA_NAME[] = "ErrorResponse";
-    std::string message;
-    MSGPACK_FIELDS(message);
-    bool operator==(const ErrorResponse& other) const = default;
 };
 
 } // namespace bb::bbapi

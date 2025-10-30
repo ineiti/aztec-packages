@@ -1,8 +1,8 @@
 import { AztecClientBackend, Barretenberg } from '@aztec/bb.js';
 import {
   AVM_V2_VERIFICATION_KEY_LENGTH_IN_FIELDS_PADDED,
-  CIVC_PROOF_LENGTH,
-  CIVC_VK_LENGTH_IN_FIELDS,
+  CHONK_PROOF_LENGTH,
+  CHONK_VK_LENGTH_IN_FIELDS,
   ULTRA_VK_LENGTH_IN_FIELDS,
 } from '@aztec/constants';
 import { Fr } from '@aztec/foundation/fields';
@@ -46,7 +46,7 @@ const logger = createLogger('ivc-integration:test:rollup-native');
 describe('Rollup IVC Integration', () => {
   let bbBinaryPath: string;
 
-  let ivcProof: RecursiveProof<typeof CIVC_PROOF_LENGTH>;
+  let ivcProof: RecursiveProof<typeof CHONK_PROOF_LENGTH>;
   let avmVK: VerificationKeyAsFields;
   let avmProof: Fr[];
   let avmPublicInputs: AvmCircuitPublicInputs;
@@ -105,7 +105,7 @@ describe('Rollup IVC Integration', () => {
       civc_proof_data: {
         public_inputs: clientIVCPublicInputs,
         proof: mapRecursiveProofToNoir(ivcProof),
-        vk_data: mapVerificationKeyToNoir(ivcVk, CIVC_VK_LENGTH_IN_FIELDS),
+        vk_data: mapVerificationKeyToNoir(ivcVk, CHONK_VK_LENGTH_IN_FIELDS),
       },
     });
 
@@ -128,7 +128,7 @@ describe('Rollup IVC Integration', () => {
       civc_proof_data: {
         public_inputs: clientIVCPublicInputs,
         proof: mapRecursiveProofToNoir(ivcProof),
-        vk_data: mapVerificationKeyToNoir(ivcVk, CIVC_VK_LENGTH_IN_FIELDS),
+        vk_data: mapVerificationKeyToNoir(ivcVk, CHONK_VK_LENGTH_IN_FIELDS),
       },
       verification_key: mapVerificationKeyToNoir(avmVK, AVM_V2_VERIFICATION_KEY_LENGTH_IN_FIELDS_PADDED),
       proof: mapAvmProofToNoir(avmProof),

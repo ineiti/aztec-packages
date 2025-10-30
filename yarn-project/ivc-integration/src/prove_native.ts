@@ -13,7 +13,7 @@ import {
 import {
   AVM_V2_PROOF_LENGTH_IN_FIELDS_PADDED,
   AVM_V2_VERIFICATION_KEY_LENGTH_IN_FIELDS_PADDED,
-  CIVC_PROOF_LENGTH,
+  CHONK_PROOF_LENGTH,
   HIDING_KERNEL_IO_PUBLIC_INPUTS_SIZE,
   NESTED_RECURSIVE_PROOF_LENGTH,
   RECURSIVE_ROLLUP_HONK_PROOF_LENGTH,
@@ -34,7 +34,7 @@ import * as path from 'path';
 export async function proofBytesToRecursiveProof(
   proofAsFields: Uint8Array[],
   vkBytes: Uint8Array,
-): Promise<RecursiveProof<typeof CIVC_PROOF_LENGTH>> {
+): Promise<RecursiveProof<typeof CHONK_PROOF_LENGTH>> {
   const vk = await VerificationKeyAsFields.fromFrBuffer(Buffer.from(vkBytes));
   const numCustomPublicInputs = vk.numPublicInputs - HIDING_KERNEL_IO_PUBLIC_INPUTS_SIZE;
   // Convert Uint8Array fields to Fr instances
@@ -48,7 +48,7 @@ export async function proofBytesToRecursiveProof(
 
   // Create Proof directly (not using fromBuffer which expects different format)
   const proof = new Proof(proofBuffer, numCustomPublicInputs);
-  return new RecursiveProof(fieldsWithoutPublicInputs, proof, true, CIVC_PROOF_LENGTH);
+  return new RecursiveProof(fieldsWithoutPublicInputs, proof, true, CHONK_PROOF_LENGTH);
 }
 
 async function verifyProofWithKey(

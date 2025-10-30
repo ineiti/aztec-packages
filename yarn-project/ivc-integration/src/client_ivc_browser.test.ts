@@ -46,7 +46,7 @@ const projectRoot = join(__dirname, '..');
 
 jest.setTimeout(300_000); // 5 minutes for browser tests
 
-describe('Client IVC Integration - Browser with Puppeteer', () => {
+describe('Chonk Integration - Browser with Puppeteer', () => {
   let server: ReturnType<typeof createServer>;
   let browser: Browser;
   let serverUrl: string;
@@ -150,12 +150,12 @@ describe('Client IVC Integration - Browser with Puppeteer', () => {
     }
   }
 
-  it('Should generate a verifiable client IVC proof from a simple mock tx in browser', async () => {
+  it('Should generate a verifiable chonk proof from a simple mock tx in browser', async () => {
     const verified = await runTestInBrowser('simple', 1, 0);
     expect(verified).toBe(true);
   });
 
-  it('Should generate a verifiable client IVC proof from a complex mock tx in browser', async () => {
+  it('Should generate a verifiable chonk proof from a complex mock tx in browser', async () => {
     const verified = await runTestInBrowser('complex', 1, 1);
     expect(verified).toBe(true);
   });
@@ -230,7 +230,7 @@ describe('Client IVC Integration - Browser with Puppeteer', () => {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>IVC Integration Browser Test</title>
+  <title>Chonk Integration Browser Test</title>
   <style>
     body {
       font-family: monospace;
@@ -250,7 +250,7 @@ describe('Client IVC Integration - Browser with Puppeteer', () => {
   </style>
 </head>
 <body>
-  <h1>IVC Integration Browser Test</h1>
+  <h1>Chonk Integration Browser Test</h1>
   <div id="status" class="loading">Initializing...</div>
 
   <script src="index.js"></script>

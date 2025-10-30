@@ -45,7 +45,7 @@ export class Barretenberg extends AsyncApi {
       // Explicit backend required - no fallback
       const backend = await createAsyncBackend(options.backend, options, logger);
       if (options.backend === BackendType.Wasm || options.backend === BackendType.WasmWorker) {
-        await backend.initSRSClientIVC();
+        await backend.initSRSChonk();
       }
       return backend;
     }
@@ -56,18 +56,18 @@ export class Barretenberg extends AsyncApi {
       } catch (err: any) {
         logger(`Unix socket unavailable (${err.message}), falling back to WASM`);
         const backend = await createAsyncBackend(BackendType.Wasm, options, logger);
-        await backend.initSRSClientIVC();
+        await backend.initSRSChonk();
         return backend;
       }
     } else {
       logger(`In browser, using WASM over worker backend.`);
       const backend = await createAsyncBackend(BackendType.WasmWorker, options, logger);
-      await backend.initSRSClientIVC();
+      await backend.initSRSChonk();
       return backend;
     }
   }
 
-  async initSRSClientIVC(srsSize = this.getDefaultSrsSize()): Promise<void> {
+  async initSRSChonk(srsSize = this.getDefaultSrsSize()): Promise<void> {
     // crsPath can be undefined
     const crs = await Crs.new(srsSize + 1, this.options.crsPath, this.options.logger);
     const grumpkinCrs = await GrumpkinCrs.new(2 ** 16 + 1, this.options.crsPath, this.options.logger);

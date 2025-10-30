@@ -1,6 +1,6 @@
 import { Barretenberg } from './index.js';
 import { ProofData, uint8ArrayToHex, hexToUint8Array } from '../proof/index.js';
-import { fromClientIVCProof, toClientIVCProof } from '../cbind/generated/api_types.js';
+import { fromChonkProof, toChonkProof } from '../cbind/generated/api_types.js';
 import { ungzip } from 'pako';
 import { Decoder, Encoder } from 'msgpackr';
 
@@ -221,7 +221,7 @@ export class AztecClientBackend {
     }
 
     // Queue IVC start with the number of circuits
-    this.api.clientIvcStart({ numCircuits: this.acirBuf.length });
+    this.api.chonkStart({ numCircuits: this.acirBuf.length });
 
     // Queue load and accumulate for each circuit
     for (let i = 0; i < this.acirBuf.length; i++) {
@@ -231,7 +231,7 @@ export class AztecClientBackend {
       const functionName = `unknown_wasm_${i}`;
 
       // Load the circuit
-      this.api.clientIvcLoad({
+      this.api.chonkLoad({
         circuit: {
           name: functionName,
           bytecode: bytecode,
@@ -240,17 +240,17 @@ export class AztecClientBackend {
       });
 
       // Accumulate with witness
-      this.api.clientIvcAccumulate({
-        witness: witness,
+      this.api.chonkAccumulate({
+        witness,
       });
     }
 
     // Generate the proof (and wait for all previous steps to finish)
-    const proveResult = await this.api.clientIvcProve({});
+    const proveResult = await this.api.chonkProve({});
     // The API currently expects a msgpack-encoded API.
-    const proof = new Encoder({ useRecords: false }).encode(fromClientIVCProof(proveResult.proof));
+    const proof = new Encoder({ useRecords: false }).encode(fromChonkProof(proveResult.proof));
     // Generate the VK
-    const vkResult = await this.api.clientIvcComputeIvcVk({
+    const vkResult = await this.api.chonkComputeIvcVk({
       circuit: {
         name: 'hiding',
         bytecode: this.acirBuf[this.acirBuf.length - 1],
@@ -267,15 +267,15 @@ export class AztecClientBackend {
 
     // Note: Verification may not work correctly until we properly serialize the proof
     if (!(await this.verify(proof, vkResult.bytes))) {
-      throw new AztecClientBackendError('Failed to verify the private (ClientIVC) transaction proof!');
+      throw new AztecClientBackendError('Failed to verify the private (Chonk) transaction proof!');
     }
     return [proofFields, proof, vkResult.bytes];
   }
 
   async verify(proof: Uint8Array, vk: Uint8Array): Promise<boolean> {
-    const result = await this.api.clientIvcVerify({
-      proof: toClientIVCProof(new Decoder({ useRecords: false }).decode(proof)),
-      vk: vk,
+    const result = await this.api.chonkVerify({
+      proof: toChonkProof(new Decoder({ useRecords: false }).decode(proof)),
+      vk,
     });
     return result.valid;
   }
@@ -283,7 +283,7 @@ export class AztecClientBackend {
   async gates(): Promise<number[]> {
     const circuitSizes: number[] = [];
     for (const buf of this.acirBuf) {
-      const gates = await this.api.clientIvcStats({
+      const gates = await this.api.chonkStats({
         circuit: {
           name: 'circuit',
           bytecode: buf,

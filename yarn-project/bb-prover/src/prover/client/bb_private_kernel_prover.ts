@@ -40,7 +40,7 @@ import type {
   PrivateKernelTailCircuitPublicInputs,
 } from '@aztec/stdlib/kernel';
 import type { NoirCompiledCircuitWithName } from '@aztec/stdlib/noir';
-import { ClientIvcProof } from '@aztec/stdlib/proofs';
+import { ChonkProofWithPublicInputs } from '@aztec/stdlib/proofs';
 import type { CircuitSimulationStats, CircuitWitnessGenerationStats } from '@aztec/stdlib/stats';
 
 import { ungzip } from 'pako';
@@ -268,7 +268,7 @@ export abstract class BBPrivateKernelProver implements PrivateKernelProver {
     return kernelProofOutput;
   }
 
-  public async createClientIvcProof(executionSteps: PrivateExecutionStep[]): Promise<ClientIvcProof> {
+  public async createChonkProof(executionSteps: PrivateExecutionStep[]): Promise<ChonkProofWithPublicInputs> {
     const timer = new Timer();
     this.log.info(`Generating ClientIVC proof...`);
     const backend = new AztecClientBackend(
@@ -285,7 +285,7 @@ export abstract class BBPrivateKernelProver implements PrivateKernelProver {
       duration: timer.ms(),
       proofSize: proof.length,
     });
-    return ClientIvcProof.fromBufferArray(proof);
+    return ChonkProofWithPublicInputs.fromBufferArray(proof);
   }
 
   public async computeGateCountForCircuit(_bytecode: Buffer, _circuitName: string): Promise<number> {
