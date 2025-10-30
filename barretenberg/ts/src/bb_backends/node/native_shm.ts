@@ -79,12 +79,15 @@ export class BarretenbergNativeShmSyncBackend implements IMsgpackBackendSync {
     }
 
     // Spawn bb process with shared memory mode
-    const args = [bbBinaryPath, 'msgpack', 'run', '--input', `${shmName}.shm`, '--max-clients', clientCount.toString()];
-    const bbProcess = spawn(findPackageRoot() + '/scripts/kill_wrapper.sh', args, {
+    const args = ['msgpack', 'run', '--input', `${shmName}.shm`, '--max-clients', clientCount.toString()];
+    const bbProcess = spawn(bbBinaryPath, args, {
       stdio: ['ignore', logFd ?? 'ignore', logFd ?? 'ignore'],
       env,
     });
-    // Disconnect from event loop so process can exit. The kill wrapper will reap bb once parent (node) dies.
+
+    // Disconnect from event loop so process can exit without waiting for bb
+    // The bb process has parent death monitoring (prctl on Linux, kqueue on macOS)
+    // so it will automatically exit when Node.js exits
     bbProcess.unref();
 
     // Track if process has exited

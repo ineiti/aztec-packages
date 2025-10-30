@@ -63,12 +63,15 @@ export class BarretenbergNativeSocketAsyncBackend implements IMsgpackBackendAsyn
     const env = { ...process.env, HARDWARE_CONCURRENCY: '1' };
 
     // Spawn bb process - it will create the socket server
-    const args = [bbBinaryPath, 'msgpack', 'run', '--input', this.socketPath];
-    this.process = spawn(findPackageRoot() + '/scripts/kill_wrapper.sh', args, {
+    const args = ['msgpack', 'run', '--input', this.socketPath];
+    this.process = spawn(bbBinaryPath, args, {
       stdio: ['ignore', logger ? 'pipe' : 'ignore', logger ? 'pipe' : 'ignore'],
       env,
     });
-    // Disconnect from event loop so process can exit. The kill wrapper will reap bb once parent (node) dies.
+
+    // Disconnect from event loop so process can exit without waiting for bb
+    // The bb process has parent death monitoring (prctl on Linux, kqueue on macOS)
+    // so it will automatically exit when Node.js exits
     this.process.unref();
 
     if (logger) {

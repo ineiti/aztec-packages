@@ -11,6 +11,13 @@
 #ifndef __wasm__
 #include "barretenberg/ipc/ipc_server.hpp"
 #include <csignal>
+#include <thread>
+#include <unistd.h>
+#ifdef __linux__
+#include <sys/prctl.h>
+#elif defined(__APPLE__)
+#include <sys/event.h>
+#endif
 #endif
 
 namespace bb {
@@ -98,6 +105,46 @@ int process_msgpack_commands(std::istream& input_stream)
 }
 
 #ifndef __wasm__
+// Set up platform-specific parent death monitoring
+// This ensures the bb process exits when the parent (Node.js) dies
+static void setup_parent_death_monitoring()
+{
+#ifdef __linux__
+    // Linux: Use prctl to request SIGTERM when parent dies
+    // This is kernel-level and very reliable
+    if (prctl(PR_SET_PDEATHSIG, SIGTERM) == -1) {
+        std::cerr << "Warning: Could not set parent death signal" << '\n';
+    }
+#elif defined(__APPLE__)
+    // macOS: Use kqueue to monitor parent process
+    // Spawn a dedicated thread that blocks waiting for parent to exit
+    pid_t parent_pid = getppid();
+    std::thread([parent_pid]() {
+        int kq = kqueue();
+        if (kq == -1) {
+            std::cerr << "Warning: Could not create kqueue for parent monitoring" << '\n';
+            return;
+        }
+
+        struct kevent change;
+        EV_SET(&change, parent_pid, EVFILT_PROC, EV_ADD | EV_ENABLE, NOTE_EXIT, 0, nullptr);
+        if (kevent(kq, &change, 1, nullptr, 0, nullptr) == -1) {
+            std::cerr << "Warning: Could not monitor parent process" << '\n';
+            close(kq);
+            return;
+        }
+
+        // Block until parent exits
+        struct kevent event;
+        kevent(kq, nullptr, 0, &event, 1, nullptr);
+
+        std::cerr << "Parent process exited, shutting down..." << '\n';
+        close(kq);
+        std::exit(0);
+    }).detach();
+#endif
+}
+
 int execute_msgpack_ipc_server(std::unique_ptr<ipc::IpcServer> server)
 {
 
@@ -147,6 +194,9 @@ int execute_msgpack_ipc_server(std::unique_ptr<ipc::IpcServer> server)
     (void)std::signal(SIGINT, graceful_shutdown_handler);
     (void)std::signal(SIGBUS, fatal_error_handler);
     (void)std::signal(SIGSEGV, fatal_error_handler);
+
+    // Set up parent death monitoring (kills this process when parent dies)
+    setup_parent_death_monitoring();
 
     if (!server->listen()) {
         std::cerr << "Error: Could not start IPC server" << '\n';

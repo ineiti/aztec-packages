@@ -66,22 +66,6 @@ describe('poseidon2Hash benchmark (Async API): WASM vs Native', () => {
     }
   }, 20000);
 
-  afterAll(async () => {
-    await wasm.destroy();
-    if (wasmApi) {
-      await wasmApi.destroy();
-    }
-    if (nativeSocketApi) {
-      await nativeSocketApi.destroy();
-    }
-    if (nativeShmApi) {
-      await nativeShmApi.destroy();
-    }
-    if (nativeShmSyncApi) {
-      nativeShmSyncApi.destroy();
-    }
-  });
-
   it.each(SIZES)(
     'benchmark with %p field elements',
     async size => {
