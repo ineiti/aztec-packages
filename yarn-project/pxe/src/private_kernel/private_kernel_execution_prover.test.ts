@@ -74,7 +74,7 @@ describe('Private Kernel Sequencer', () => {
     publicInputs.callContext.contractAddress = contractAddress;
     return new PrivateCallExecutionResult(
       Buffer.alloc(0),
-      VerificationKey.makeFake().toBuffer(),
+      VerificationKey.makeFakeMegaHonk(),
       new Map(),
       publicInputs,
       new Map(),
