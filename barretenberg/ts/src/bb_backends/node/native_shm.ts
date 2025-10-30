@@ -79,7 +79,16 @@ export class BarretenbergNativeShmSyncBackend implements IMsgpackBackendSync {
     }
 
     // Spawn bb process with shared memory mode
-    const args = ['msgpack', 'run', '--input', `${shmName}.shm`, '--max-clients', clientCount.toString()];
+    const args = [
+      'msgpack',
+      'run',
+      '--input',
+      `${shmName}.shm`,
+      '--max-clients',
+      clientCount.toString(),
+      '--request-ring-size',
+      `${1024 * 1024 * 2}`,
+    ];
     const bbProcess = spawn(bbBinaryPath, args, {
       stdio: ['ignore', logFd ?? 'ignore', logFd ?? 'ignore'],
       env,

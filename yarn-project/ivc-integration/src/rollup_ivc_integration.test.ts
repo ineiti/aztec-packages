@@ -102,7 +102,7 @@ describe('Rollup IVC Integration', () => {
     );
 
     const privateBaseRollupWitnessResult = await witnessGenMockRollupTxBasePrivateCircuit({
-      civc_proof_data: {
+      chonk_proof_data: {
         public_inputs: clientIVCPublicInputs,
         proof: mapRecursiveProofToNoir(ivcProof),
         vk_data: mapVerificationKeyToNoir(ivcVk, CHONK_VK_LENGTH_IN_FIELDS),
@@ -125,7 +125,7 @@ describe('Rollup IVC Integration', () => {
     };
 
     const publicBaseRollupWitnessResult = await witnessGenMockPublicBaseCircuit({
-      civc_proof_data: {
+      chonk_proof_data: {
         public_inputs: clientIVCPublicInputs,
         proof: mapRecursiveProofToNoir(ivcProof),
         vk_data: mapVerificationKeyToNoir(ivcVk, CHONK_VK_LENGTH_IN_FIELDS),
