@@ -12,46 +12,48 @@ export hash=$(cache_content_hash \
   ../barretenberg/cpp/.rebuild_patterns
 )
 
+function build_contracts {
+  set -euo pipefail
+
+  mkdir -p generated
+  # Copy from noir-projects. Bootstrap must have ran in noir-projects.
+  local rollup_verifier_path=../noir-projects/noir-protocol-circuits/target/keys/rollup_root_verifier.sol
+  if [ -f "$rollup_verifier_path" ]; then
+    cp "$rollup_verifier_path" generated/HonkVerifier.sol
+  else
+    echo_stderr "You may need to run ./bootstrap.sh in the noir-projects folder. Could not find the rollup verifier at $rollup_verifier_path."
+    exit 1
+  fi
+
+  # Compile contracts
+  # Step 1: Build everything in src.
+  forge build $(find src test -name '*.sol')
+
+  # Step 1.5: Output storage information for the rollup contract.
+  forge inspect --json src/core/Rollup.sol:Rollup storage > ./out/Rollup.sol/storage.json
+
+  # Step 2: Build the generated verifier contract with optimization.
+  forge build $(find generated -name '*.sol') \
+    --optimize \
+    --optimizer-runs 1 \
+    --no-metadata
+}
+
+export -f build_contracts
+
 function build {
   echo_header "l1-contracts build"
 
   # Deps install
-  yarn
+  npm_install_deps
 
   local artifact=l1-contracts-$hash.tar.gz
   if ! cache_download $artifact; then
     # Clean
     rm -rf broadcast cache out serve generated
-
-    # Install
-    forge install
-
     # Ensure libraries are at the correct version
-    git submodule update --init --recursive ./lib
-
-    mkdir -p generated
-    # Copy from noir-projects. Bootstrap must have ran in noir-projects.
-    local rollup_verifier_path=../noir-projects/noir-protocol-circuits/target/keys/rollup_root_verifier.sol
-    if [ -f "$rollup_verifier_path" ]; then
-      cp "$rollup_verifier_path" generated/HonkVerifier.sol
-    else
-      echo_stderr "You may need to run ./bootstrap.sh in the noir-projects folder. Could not find the rollup verifier at $rollup_verifier_path."
-      exit 1
-    fi
-
-    # Compile contracts
-    # Step 1: Build everything in src.
-    forge build $(find src test -name '*.sol')
-
-    # Step 1.5: Output storage information for the rollup contract.
-    forge inspect --json src/core/Rollup.sol:Rollup storage > ./out/Rollup.sol/storage.json
-
-    # Step 2: Build the generated verifier contract with optimization.
-    forge build $(find generated -name '*.sol') \
-      --optimize \
-      --optimizer-runs 1 \
-      --no-metadata
-
+    denoise "forge install && git submodule update --init --recursive ./lib"
+    denoise build_contracts
     cache_upload $artifact out generated
   fi
 }
