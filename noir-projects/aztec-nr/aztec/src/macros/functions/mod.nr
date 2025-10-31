@@ -6,10 +6,10 @@ pub mod initialization_utils;
 pub(crate) mod stub_registry;
 pub(crate) mod self_call_registry;
 pub(crate) mod auth_registry;
-pub(crate) mod external_functions_registry;
 pub(crate) mod utils;
 
 use crate::macros::{
+    external_functions::registry::{add_private_function, add_public_function, add_utility_function},
     functions::{
         abi_export::create_fn_abi_export,
         utils::{transform_private, transform_public, transform_utility},
@@ -18,9 +18,6 @@ use crate::macros::{
 };
 use super::utils::{fn_has_noinitcheck, is_fn_initializer, is_fn_only_self, is_fn_view};
 use auth_registry::AUTHORIZE_ONCE_REGISTRY;
-use external_functions_registry::{
-    add_external_private_function, add_external_public_function, add_external_utility_function,
-};
 
 // Functions can have multiple attributes applied to them, e.g. a single function can have #[external("public")],
 // #[view] and #[only_self]. However. the order in which this will be evaluated is unknown, which makes combining them
@@ -146,13 +143,13 @@ pub comptime fn authorize_once(
 pub comptime fn external(f: FunctionDefinition, f_type: CtString) -> Quoted {
     if f_type.eq("private") {
         assert_valid_private(f);
-        add_external_private_function(f);
+        add_private_function(f);
     } else if f_type.eq("public") {
         assert_valid_public(f);
-        add_external_public_function(f);
+        add_public_function(f);
     } else if f_type.eq("utility") {
         assert_valid_utility(f);
-        add_external_utility_function(f);
+        add_utility_function(f);
     } else {
         let function_name = f.name();
         panic(
