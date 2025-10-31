@@ -51,7 +51,11 @@ import { createLibp2p } from 'libp2p';
 
 import type { P2PConfig } from '../../config.js';
 import type { MemPools } from '../../mem_pools/interface.js';
-import { AttestationValidator, BlockProposalValidator } from '../../msg_validators/index.js';
+import {
+  AttestationValidator,
+  BlockProposalValidator,
+  FishermanAttestationValidator,
+} from '../../msg_validators/index.js';
 import { MessageSeenValidator } from '../../msg_validators/msg_seen_validator/msg_seen_validator.js';
 import { getDefaultAllowedSetupFunctions } from '../../msg_validators/tx_validator/allowed_public_setup.js';
 import { type MessageValidator, createTxMessageValidators } from '../../msg_validators/tx_validator/factory.js';
@@ -140,6 +144,8 @@ export class LibP2PService<T extends P2PClientType = P2PClientType.Full> extends
 
   private instrumentation: P2PInstrumentation;
 
+  protected logger: Logger;
+
   constructor(
     private clientType: T,
     private config: P2PConfig,
@@ -153,9 +159,12 @@ export class LibP2PService<T extends P2PClientType = P2PClientType.Full> extends
     private proofVerifier: ClientProtocolCircuitVerifier,
     private worldStateSynchronizer: WorldStateSynchronizer,
     telemetry: TelemetryClient,
-    protected logger = createLogger('p2p:libp2p_service'),
+    logger: Logger = createLogger('p2p:libp2p_service'),
   ) {
     super(telemetry, 'LibP2PService');
+
+    // Create child logger with fisherman prefix if in fisherman mode
+    this.logger = config.fishermanMode ? logger.createChild('[FISHERMAN]') : logger;
 
     this.instrumentation = new P2PInstrumentation(telemetry, 'LibP2PService');
 
@@ -174,7 +183,10 @@ export class LibP2PService<T extends P2PClientType = P2PClientType.Full> extends
       this.protocolVersion,
     );
 
-    this.attestationValidator = new AttestationValidator(epochCache);
+    // Use FishermanAttestationValidator in fisherman mode to validate attestation payloads against proposals
+    this.attestationValidator = config.fishermanMode
+      ? new FishermanAttestationValidator(epochCache, mempools.attestationPool!)
+      : new AttestationValidator(epochCache);
     this.blockProposalValidator = new BlockProposalValidator(epochCache, { txsPermitted: !config.disableTransactions });
 
     this.gossipSubEventHandler = this.handleGossipSubEvent.bind(this);
@@ -873,13 +885,26 @@ export class LibP2PService<T extends P2PClientType = P2PClientType.Full> extends
     // TODO: fix up this pattern - the abstraction is not nice
     // The attestation can be undefined if no handler is registered / the validator deems the block invalid
     if (attestations?.length) {
-      for (const attestation of attestations) {
-        this.logger.verbose(`Broadcasting attestation for slot ${attestation.slotNumber.toNumber()}`, {
-          p2pMessageIdentifier: await attestation.p2pMessageIdentifier(),
-          slot: attestation.slotNumber.toNumber(),
-          archive: attestation.archive.toString(),
-        });
-        await this.broadcastAttestation(attestation);
+      // In fisherman mode, validate and create attestations but don't broadcast them
+      if (this.config.fishermanMode) {
+        this.logger.info(
+          `Fisherman mode: validated proposal for slot ${attestations[0].slotNumber.toNumber()} with ${attestations.length} attestation(s)`,
+          {
+            slot: attestations[0].slotNumber.toNumber(),
+            archive: attestations[0].archive.toString(),
+            p2pMessageIdentifier: await attestations[0].p2pMessageIdentifier(),
+            attestationCount: attestations.length,
+          },
+        );
+      } else {
+        for (const attestation of attestations) {
+          this.logger.verbose(`Broadcasting attestation for slot ${attestation.slotNumber.toNumber()}`, {
+            p2pMessageIdentifier: await attestation.p2pMessageIdentifier(),
+            slot: attestation.slotNumber.toNumber(),
+            archive: attestation.archive.toString(),
+          });
+          await this.broadcastAttestation(attestation);
+        }
       }
     }
   }
@@ -996,19 +1021,24 @@ export class LibP2PService<T extends P2PClientType = P2PClientType.Full> extends
   }
 
   private async validateRequestedTx(tx: Tx, peerId: PeerId, txValidator: TxValidator, requested?: Set<`0x${string}`>) {
+    // In fisherman mode, we validate but don't penalize peers
+    const penalize = this.config.fishermanMode
+      ? (_severity: PeerErrorSeverity) => {}
+      : (severity: PeerErrorSeverity) => this.peerManager.penalizePeer(peerId, severity);
+
     if (!(await tx.validateTxHash())) {
-      this.peerManager.penalizePeer(peerId, PeerErrorSeverity.MidToleranceError);
+      penalize(PeerErrorSeverity.MidToleranceError);
       throw new ValidationError(`Received tx with invalid hash ${tx.getTxHash().toString()}.`);
     }
 
     if (requested && !requested.has(tx.getTxHash().toString())) {
-      this.peerManager.penalizePeer(peerId, PeerErrorSeverity.MidToleranceError);
+      penalize(PeerErrorSeverity.MidToleranceError);
       throw new ValidationError(`Received tx with hash ${tx.getTxHash().toString()} that was not requested.`);
     }
 
     const { result } = await txValidator.validateTx(tx);
     if (result === 'invalid') {
-      this.peerManager.penalizePeer(peerId, PeerErrorSeverity.LowToleranceError);
+      penalize(PeerErrorSeverity.LowToleranceError);
       throw new ValidationError(`Received tx with hash ${tx.getTxHash().toString()} that is invalid.`);
     }
   }
@@ -1038,7 +1068,10 @@ export class LibP2PService<T extends P2PClientType = P2PClientType.Full> extends
         severity = await this.handleDoubleSpendFailure(tx, txBlockNumber);
       }
 
-      this.peerManager.penalizePeer(peerId, severity);
+      // In fisherman mode, we validate but don't penalize peers
+      if (!this.config.fishermanMode) {
+        this.peerManager.penalizePeer(peerId, severity);
+      }
       return false;
     }
     return true;
@@ -1190,7 +1223,10 @@ export class LibP2PService<T extends P2PClientType = P2PClientType.Full> extends
   public async validateAttestation(peerId: PeerId, attestation: BlockAttestation): Promise<boolean> {
     const severity = await this.attestationValidator.validate(attestation);
     if (severity) {
-      this.peerManager.penalizePeer(peerId, severity);
+      // In fisherman mode, we validate but don't penalize peers
+      if (!this.config.fishermanMode) {
+        this.peerManager.penalizePeer(peerId, severity);
+      }
       return false;
     }
 
@@ -1209,8 +1245,11 @@ export class LibP2PService<T extends P2PClientType = P2PClientType.Full> extends
   public async validateBlockProposal(peerId: PeerId, block: BlockProposal): Promise<boolean> {
     const severity = await this.blockProposalValidator.validate(block);
     if (severity) {
-      this.logger.debug(`Penalizing peer ${peerId} for block proposal validation failure`);
-      this.peerManager.penalizePeer(peerId, severity);
+      // In fisherman mode, we validate but don't penalize peers
+      if (!this.config.fishermanMode) {
+        this.logger.debug(`Penalizing peer ${peerId} for block proposal validation failure`);
+        this.peerManager.penalizePeer(peerId, severity);
+      }
       return false;
     }
 
