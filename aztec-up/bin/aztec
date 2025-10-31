@@ -246,7 +246,7 @@ EOF
       -v $HOME:$HOME \
       -e HOME=$HOME \
       --workdir="$PWD" \
-      --entrypoint=/usr/src/barretenberg/cpp/build/bin/bb \
+      --entrypoint=/usr/src/barretenberg/cpp/build/bin/bb-avm \
       $DOCKER_REPO:$VERSION aztec_process
 
     echo "Compilation complete!"
