@@ -15,7 +15,9 @@ use crate::macros::{
 use dep::protocol_types::meta::utils::derive_serialization_quotes;
 use std::meta::{ctstring::AsCtString, type_of};
 
-pub(crate) comptime fn transform_private(f: FunctionDefinition) {
+pub(crate) comptime fn transform_private(f: FunctionDefinition) -> Quoted {
+    // TODO(benesjan): This function should only generate the new function's quote. Move the following to a different
+    // place.
     register_private_fn_stubs(f);
 
     let module_has_initializer = module_has_initializer(f.module());
@@ -26,13 +28,14 @@ pub(crate) comptime fn transform_private(f: FunctionDefinition) {
     // First we change the function signature so that it also receives `PrivateContextInputs`, which contain information
     // about the execution context (e.g. the caller).
     let original_params = f.parameters();
-    f.set_parameters(&[(
+
+    let generated_function_params = &[(
         quote { inputs },
         quote { crate::context::inputs::private_context_inputs::PrivateContextInputs }.as_type(),
     )]
-        .append(original_params));
+        .append(original_params);
 
-    let mut body = f.body().as_block().unwrap();
+    let body = f.body().as_block().unwrap();
 
     // The original params are hashed and passed to the `context` object, so that the kernel can verify we've received
     // the correct values.
@@ -162,30 +165,25 @@ pub(crate) comptime fn transform_private(f: FunctionDefinition) {
 
     let context_finish = quote { self.context.finish() };
 
-    // A quote to be injected at the beginning of the function body.
-    let to_prepend = quote {
-        dep::aztec::oracle::version::assert_compatible_oracle_version();
-        $contract_self_creation
-        $assert_initializer
-        $init_check
-        $internal_check
-        $view_check
-        $message_discovery_call
-        $authorize_once_check
-    };
+    quote {
+        fn __aztec_nr_internals__$function_name($generated_function_params) -> aztec::protocol_types::abis::private_circuit_public_inputs::PrivateCircuitPublicInputs {
+            aztec::oracle::version::assert_compatible_oracle_version();
+            $contract_self_creation
+            $assert_initializer
+            $init_check
+            $internal_check
+            $view_check
+            $message_discovery_call
+            $authorize_once_check
 
-    let to_append = quote {
-        $return_value
-        $mark_as_initialized
-        $context_finish
-    };
-    let modified_body = modify_fn_body(body, to_prepend, to_append);
-    f.set_body(modified_body);
-    f.set_return_type(
-        quote { dep::protocol_types::abis::private_circuit_public_inputs::PrivateCircuitPublicInputs }
-            .as_type(),
-    );
-    f.set_return_data();
+            $body
+
+
+            $return_value
+            $mark_as_initialized
+            $context_finish
+        }
+    }
 }
 
 pub(crate) comptime fn transform_public(f: FunctionDefinition) {
@@ -304,6 +302,14 @@ pub(crate) comptime fn transform_public(f: FunctionDefinition) {
     // bytecode.
     f.set_unconstrained(true);
     f.set_return_public(true);
+
+    quote {
+        fn $function_name($generated_function_params) {
+            $to_prepend
+            $modified_body
+            $to_append
+        }
+    }
 }
 
 pub(crate) comptime fn transform_utility(f: FunctionDefinition) {

@@ -1,16 +1,15 @@
 mod registry;
-mod private;
-mod public;
-mod utility;
 
-use private::process_private_function;
-use public::process_public_function;
-use utility::process_utility_function;
+use functions::utils::{transform_private, transform_public, transform_utility};
+use registry::{get_private_functions, get_public_functions, get_utility_functions};
 
 pub(crate) comptime fn process_functions(m: Module) -> Quoted {
-    let private_functions = process_private_functions(m);
-    let public_functions = process_public_functions(m);
-    let utility_functions = process_utility_functions(m);
+    let private_functions =
+        get_private_functions(m).map(|function| transform_private(functions)).join(quote {});
+    let public_functions =
+        get_public_functions(m).map(|function| transform_public(functions)).join(quote {});
+    let utility_functions =
+        get_utility_functions(m).map(|function| transform_utility(functions)).join(quote {});
 
     quote {
         $private_functions

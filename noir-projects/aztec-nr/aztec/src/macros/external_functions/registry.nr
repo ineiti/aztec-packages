@@ -23,14 +23,26 @@ comptime fn add_to_registry(
     registry.insert(module, functions_to_insert);
 }
 
-pub comptime fn add_private_function(f: FunctionDefinition) {
+pub(crate) comptime fn add_private_function(f: FunctionDefinition) {
     add_to_registry(&mut PRIVATE_REGISTRY, f);
 }
 
-pub comptime fn add_public_function(f: FunctionDefinition) {
+pub(crate) comptime fn add_public_function(f: FunctionDefinition) {
     add_to_registry(&mut PUBLIC_REGISTRY, f);
 }
 
-pub comptime fn add_utility_function(f: FunctionDefinition) {
+pub(crate) comptime fn add_utility_function(f: FunctionDefinition) {
     add_to_registry(&mut UTILITY_REGISTRY, f);
+}
+
+pub(crate) comptime fn get_private_functions(m: Module) -> Option<[FunctionDefinition]> {
+    PRIVATE_REGISTRY.get(m)
+}
+
+pub(crate) comptime fn get_public_functions(m: Module) -> Option<[FunctionDefinition]> {
+    PUBLIC_REGISTRY.get(m)
+}
+
+pub(crate) comptime fn get_utility_functions(m: Module) -> Option<[FunctionDefinition]> {
+    UTILITY_REGISTRY.get(m)
 }
