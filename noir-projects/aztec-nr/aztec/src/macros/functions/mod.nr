@@ -6,6 +6,7 @@ pub mod initialization_utils;
 pub(crate) mod stub_registry;
 pub(crate) mod self_call_registry;
 pub(crate) mod auth_registry;
+pub(crate) mod external_functions_registry;
 pub(crate) mod utils;
 
 use crate::macros::{
@@ -17,6 +18,9 @@ use crate::macros::{
 };
 use super::utils::{fn_has_noinitcheck, is_fn_initializer, is_fn_only_self, is_fn_view};
 use auth_registry::AUTHORIZE_ONCE_REGISTRY;
+use external_functions_registry::{
+    add_external_private_function, add_external_public_function, add_external_utility_function,
+};
 
 // Functions can have multiple attributes applied to them, e.g. a single function can have #[external("public")],
 // #[view] and #[only_self]. However. the order in which this will be evaluated is unknown, which makes combining them
@@ -136,13 +140,19 @@ pub comptime fn authorize_once(
 
 /// Same as in Solidity external functions are functions that our callable from outside the contract. External
 /// functions can be either private, public, or utility.
+///
+/// In this function we also perform some basic checks on the function to ensure it is valid and then we add the
+/// function to the external functions registry for later processing by the `#[aztec]` macro.
 pub comptime fn external(f: FunctionDefinition, f_type: CtString) -> Quoted {
     if f_type.eq("private") {
-        private(f)
+        assert_valid_private(f);
+        add_external_private_function(f);
     } else if f_type.eq("public") {
-        public(f)
+        assert_valid_public(f);
+        add_external_public_function(f);
     } else if f_type.eq("utility") {
-        utility(f)
+        assert_valid_utility(f);
+        add_external_utility_function(f);
     } else {
         let function_name = f.name();
         panic(
@@ -153,11 +163,7 @@ pub comptime fn external(f: FunctionDefinition, f_type: CtString) -> Quoted {
 }
 
 /// Private functions are executed client-side and preserve privacy.
-comptime fn private(f: FunctionDefinition) -> Quoted {
-    // We need to add this attribute to be able to identify if the function is external private when constructing
-    // the contract artifact.
-    f.add_attribute("private");
-
+comptime fn assert_valid_private(f: FunctionDefinition) -> Quoted {
     let visibility = f.visibility();
     if visibility != quote {} {
         let name = f.name();
@@ -172,57 +178,30 @@ comptime fn private(f: FunctionDefinition) -> Quoted {
             f"#[external(\"private\")] functions must not be unconstrained - {name} is",
         );
     }
-
-    // The abi export function is expected to be executed before the function is transformed.
-    let fn_abi_export = create_fn_abi_export(f);
-
-    transform_private(f);
-
-    fn_abi_export
 }
 
 /// Public functions are executed sequencer-side and do not preserve privacy, similar to the EVM.
-comptime fn public(f: FunctionDefinition) -> Quoted {
-    // We need to add this attribute to be able to identify if the function is external public when constructing
-    // the contract artifact.
-    f.add_attribute("public");
+comptime fn assert_valid_public(f: FunctionDefinition) -> Quoted {
+    let visibility = f.visibility();
+    if visibility != quote {} {
+        let name = f.name();
+        panic(
+            f"A function marked as #[external(\"public\")] must not have public Noir visibility - {name}'s visibility is '{visibility}'",
+        );
+    }
 
-    // We don't want to transform the public_dispatch function.
-    if f.name() == quote { public_dispatch } {
-        quote {}
-    } else {
-        let visibility = f.visibility();
-        if visibility != quote {} {
-            let name = f.name();
-            panic(
-                f"A function marked as #[external(\"public\")] must not have public Noir visibility - {name}'s visibility is '{visibility}'",
-            );
-        }
-
-        if f.is_unconstrained() {
-            let name = f.name();
-            panic(
-                f"#[external(\"public\")] functions must not be unconstrained - {name} is",
-            );
-        }
-
-        // The abi export function is expected to be executed before the function is transformed.
-        let fn_abi_export = create_fn_abi_export(f);
-
-        transform_public(f);
-
-        fn_abi_export
+    if f.is_unconstrained() {
+        let name = f.name();
+        panic(
+            f"#[external(\"public\")] functions must not be unconstrained - {name} is",
+        );
     }
 }
 
 /// Utility functions are standalone unconstrained functions that cannot be called from another function in a contract.
 /// They are typically used either to obtain some information from the contract (e.g. token balance of a user) or to
 /// modify internal contract-related state of PXE (e.g. processing logs in Aztec.nr during sync).
-comptime fn utility(f: FunctionDefinition) -> Quoted {
-    // We need to add this attribute to be able to identify if the function is external utility when constructing
-    // the contract artifact.
-    f.add_attribute("utility");
-
+comptime fn assert_valid_utility(f: FunctionDefinition) -> Quoted {
     let visibility = f.visibility();
     if visibility != quote {} {
         let name = f.name();
@@ -238,22 +217,11 @@ comptime fn utility(f: FunctionDefinition) -> Quoted {
         );
     }
 
-    post_external_utility_checks(f);
-
-    // The abi export function is expected to be executed before the function is transformed.
-    let fn_abi_export = create_fn_abi_export(f);
-
-    transform_utility(f);
-
-    fn_abi_export
-}
-
-/// Utility functions cannot be used with the following modifiers: #[authorize_once], #[only_self], #[view],
-/// #[initializer], and #[noinitcheck]. Since we cannot enforce a specific ordering between these modifiers and
-/// #[external(...)], and we cannot access the #[external(...)] argument from within these modifiers' implementations
-/// (as accessing EXTERNAL_REGISTRY would require enforcing ordering), we perform these compatibility checks here in
-/// the utility macro.
-comptime fn post_external_utility_checks(f: FunctionDefinition) {
+    // Utility functions cannot be used with the following modifiers: #[authorize_once], #[only_self], #[view],
+    // #[initializer], and #[noinitcheck]. Since we cannot enforce a specific ordering between these modifiers and
+    // #[external(...)], and we cannot access the #[external(...)] argument from within these modifiers' implementations
+    // (as accessing EXTERNAL_REGISTRY would require enforcing ordering), we perform these compatibility checks here in
+    // the utility macro.
     if AUTHORIZE_ONCE_REGISTRY.get(f).is_some() {
         let name = f.name();
         panic(
