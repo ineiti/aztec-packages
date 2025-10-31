@@ -20,7 +20,15 @@ import type { ServerCircuitProver } from '@aztec/stdlib/interfaces/server';
 import type { CheckpointConstantData } from '@aztec/stdlib/rollup';
 import { makeBloatedProcessedTx } from '@aztec/stdlib/testing';
 import { MerkleTreeId, PublicDataTreeLeaf } from '@aztec/stdlib/trees';
-import { type BlockHeader, type GlobalVariables, type ProcessedTx, TreeSnapshots, type Tx } from '@aztec/stdlib/tx';
+import {
+  type BlockHeader,
+  type FailedTx,
+  type GlobalVariables,
+  type ProcessReturnValues,
+  type ProcessedTx,
+  TreeSnapshots,
+  type Tx,
+} from '@aztec/stdlib/tx';
 import type { MerkleTreeAdminDatabase } from '@aztec/world-state';
 import { NativeWorldStateService } from '@aztec/world-state/native';
 
@@ -324,7 +332,7 @@ export class TestContext {
       numL1ToL2Messages?: number;
       contractDataSource?: SimpleContractDataSource;
     } = {},
-  ) {
+  ): Promise<[ProcessedTx[], FailedTx[], Tx[], ProcessReturnValues[]]> {
     const l1ToL2Messages = times(numL1ToL2Messages, i => new Fr(this.blockNumber * 100 + i));
     const merkleTrees = await this.worldState.fork();
     await merkleTrees.appendLeaves(

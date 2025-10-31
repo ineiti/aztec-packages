@@ -5,14 +5,14 @@ import { sleep } from '@aztec/foundation/sleep';
 import { TestDateProvider } from '@aztec/foundation/timer';
 import { computeFeePayerBalanceLeafSlot } from '@aztec/protocol-contracts/fee-juice';
 import { bufferAsFields } from '@aztec/stdlib/abi';
-import { AvmCircuitInputs, PublicDataWrite, RevertCode } from '@aztec/stdlib/avm';
+import { AvmCircuitPublicInputs, AvmExecutionHints, PublicDataWrite, RevertCode } from '@aztec/stdlib/avm';
+import { PublicTxResult } from '@aztec/stdlib/avm';
 import { AztecAddress } from '@aztec/stdlib/aztec-address';
 import type { ContractDataSource } from '@aztec/stdlib/contract';
 import { SimulationError } from '@aztec/stdlib/errors';
 import { Gas, GasFees } from '@aztec/stdlib/gas';
 import { LogHash } from '@aztec/stdlib/kernel';
 import { ContractClassLogFields } from '@aztec/stdlib/logs';
-import { ProvingRequestType } from '@aztec/stdlib/proofs';
 import { makeContractClassPublic, mockTx } from '@aztec/stdlib/testing';
 import { type MerkleTreeWriteOperations, PublicDataTreeLeaf, PublicDataTreeLeafPreimage } from '@aztec/stdlib/trees';
 import { GlobalVariables, StateReference, Tx, type TxValidator } from '@aztec/stdlib/tx';
@@ -22,7 +22,7 @@ import { strict as assert } from 'assert';
 import { type MockProxy, mock } from 'jest-mock-extended';
 
 import { PublicContractsDB } from '../public_db_sources.js';
-import type { PublicTxResult, PublicTxSimulator } from '../public_tx_simulator/public_tx_simulator.js';
+import type { PublicTxSimulator } from '../public_tx_simulator/public_tx_simulator.js';
 import { GuardedMerkleTreeOperations } from './guarded_merkle_tree.js';
 import { PublicProcessor } from './public_processor.js';
 
@@ -83,22 +83,15 @@ describe('public_processor', () => {
 
     const stateReference = StateReference.empty();
 
-    const avmCircuitInputs = AvmCircuitInputs.empty();
-    mockedEnqueuedCallsResult = {
-      avmProvingRequest: {
-        type: ProvingRequestType.PUBLIC_VM,
-        inputs: avmCircuitInputs,
-      },
-      gasUsed: {
-        totalGas: Gas.empty(),
-        teardownGas: Gas.empty(),
-        publicGas: Gas.empty(),
-        billedGas: Gas.empty(),
-      },
-      revertCode: RevertCode.OK,
-      processedPhases: [],
-      logs: [],
-    };
+    mockedEnqueuedCallsResult = new PublicTxResult(
+      /*gasUsed=*/ { totalGas: Gas.empty(), teardownGas: Gas.empty(), publicGas: Gas.empty(), billedGas: Gas.empty() },
+      RevertCode.OK,
+      undefined,
+      /*appLogicReturnValue=*/ [],
+      /*logs=*/ [],
+      AvmExecutionHints.empty(),
+      AvmCircuitPublicInputs.empty(),
+    );
 
     merkleTree.getPreviousValueIndex.mockResolvedValue({
       index: 0n,

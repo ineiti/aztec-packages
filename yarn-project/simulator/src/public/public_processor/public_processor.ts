@@ -7,7 +7,14 @@ import { DateProvider, Timer, elapsed, executeTimeout } from '@aztec/foundation/
 import { ProtocolContractAddress } from '@aztec/protocol-contracts';
 import { ContractClassPublishedEvent } from '@aztec/protocol-contracts/class-registry';
 import { computeFeePayerBalanceLeafSlot, computeFeePayerBalanceStorageSlot } from '@aztec/protocol-contracts/fee-juice';
-import { PublicDataWrite } from '@aztec/stdlib/avm';
+import {
+  AvmCircuitInputs,
+  AvmCircuitPublicInputs,
+  AvmExecutionHints,
+  type AvmProvingRequest,
+  PublicDataWrite,
+} from '@aztec/stdlib/avm';
+import type { PublicTxSimulatorConfig } from '@aztec/stdlib/avm';
 import type { AztecAddress } from '@aztec/stdlib/aztec-address';
 import type { ContractDataSource } from '@aztec/stdlib/contract';
 import { computeTransactionFee } from '@aztec/stdlib/fees';
@@ -18,15 +25,14 @@ import type {
   PublicProcessorValidator,
   SequencerConfig,
 } from '@aztec/stdlib/interfaces/server';
+import { ProvingRequestType } from '@aztec/stdlib/proofs';
 import { MerkleTreeId } from '@aztec/stdlib/trees';
 import {
   type FailedTx,
   GlobalVariables,
-  NestedProcessReturnValues,
   type ProcessedTx,
   StateReference,
   Tx,
-  TxExecutionPhase,
   makeProcessedTxFromPrivateOnlyTx,
   makeProcessedTxFromTxWithPublicCalls,
 } from '@aztec/stdlib/tx';
@@ -43,13 +49,12 @@ import { ForkCheckpoint } from '@aztec/world-state/native';
 import { AssertionError } from 'assert';
 
 import { PublicContractsDB, PublicTreesDB } from '../public_db_sources.js';
-import {
-  type PublicTxSimulator,
-  type PublicTxSimulatorConfig,
-  TelemetryPublicTxSimulator,
-} from '../public_tx_simulator/index.js';
+import { type PublicTxSimulator, TelemetryPublicTxSimulator } from '../public_tx_simulator/index.js';
 import { GuardedMerkleTreeOperations } from './guarded_merkle_tree.js';
 import { PublicProcessorMetrics } from './public_processor_metrics.js';
+
+/** Return values of simulating a TX. */
+export type ProcessReturnValues = Fr[];
 
 /**
  * Creates new instances of PublicProcessor given the provided merkle tree db and contract data source.
@@ -150,7 +155,7 @@ export class PublicProcessor implements Traceable {
     txs: Iterable<Tx> | AsyncIterable<Tx>,
     limits: PublicProcessorLimits = {},
     validator: PublicProcessorValidator = {},
-  ): Promise<[ProcessedTx[], FailedTx[], Tx[], NestedProcessReturnValues[]]> {
+  ): Promise<[ProcessedTx[], FailedTx[], Tx[], ProcessReturnValues[]]> {
     const { maxTransactions, maxBlockSize, deadline, maxBlockGas, maxBlobFields } = limits;
     const { preprocessValidator, nullifierCache } = validator;
     const result: ProcessedTx[] = [];
@@ -159,7 +164,7 @@ export class PublicProcessor implements Traceable {
     const timer = new Timer();
 
     let totalSizeInBytes = 0;
-    let returns: NestedProcessReturnValues[] = [];
+    let returns: ProcessReturnValues[] = [];
     let totalPublicGas = new Gas(0, 0);
     let totalBlockGas = new Gas(0, 0);
     let totalBlobFields = 0;
@@ -213,12 +218,12 @@ export class PublicProcessor implements Traceable {
           const reason = result.reason.join(', ');
           this.log.debug(`Rejecting tx ${txHash.toString()} due to pre-process validation fail: ${reason}`);
           failed.push({ tx, error: new Error(`Tx failed preprocess validation: ${reason}`) });
-          returns.push(new NestedProcessReturnValues([]));
+          returns.push([]);
           continue;
         } else if (result.result === 'skipped') {
           const reason = result.reason.join(', ');
           this.log.debug(`Skipping tx ${txHash.toString()} due to pre-process validation: ${reason}`);
-          returns.push(new NestedProcessReturnValues([]));
+          returns.push([]);
           continue;
         } else {
           this.log.trace(`Tx ${txHash.toString()} is valid before processing.`);
@@ -318,7 +323,7 @@ export class PublicProcessor implements Traceable {
         const errorMessage = err instanceof Error || err instanceof AssertionError ? err.message : 'Unknown error';
         this.log.warn(`Failed to process tx ${txHash.toString()}: ${errorMessage} ${err?.stack}`);
         failed.push({ tx, error: err instanceof Error ? err : new Error(errorMessage) });
-        returns.push(new NestedProcessReturnValues([]));
+        returns.push([]);
 
         // Ensure we're at the same state as when we started processing this tx.
         await this.checkWorldStateUnchanged(startStateReference, txHash, err);
@@ -361,7 +366,7 @@ export class PublicProcessor implements Traceable {
   }
 
   @trackSpan('PublicProcessor.processTx', tx => ({ [Attributes.TX_HASH]: tx.getTxHash().toString() }))
-  private async processTx(tx: Tx, deadline: Date | undefined): Promise<[ProcessedTx, NestedProcessReturnValues[]]> {
+  private async processTx(tx: Tx, deadline: Date | undefined): Promise<[ProcessedTx, ProcessReturnValues]> {
     const [time, [processedTx, returnValues]] = await elapsed(() => this.processTxWithinDeadline(tx, deadline));
 
     this.log.verbose(
@@ -385,7 +390,7 @@ export class PublicProcessor implements Traceable {
       },
     );
 
-    return [processedTx, returnValues ?? []];
+    return [processedTx, returnValues];
   }
 
   private async doTreeInsertionsForPrivateOnlyTx(processedTx: ProcessedTx): Promise<void> {
@@ -419,10 +424,10 @@ export class PublicProcessor implements Traceable {
   private async processTxWithinDeadline(
     tx: Tx,
     deadline: Date | undefined,
-  ): Promise<[ProcessedTx, NestedProcessReturnValues[] | undefined]> {
-    const innerProcessFn: () => Promise<[ProcessedTx, NestedProcessReturnValues[] | undefined]> = tx.hasPublicCalls()
+  ): Promise<[ProcessedTx, ProcessReturnValues]> {
+    const innerProcessFn: () => Promise<[ProcessedTx, ProcessReturnValues]> = tx.hasPublicCalls()
       ? () => this.processTxWithPublicCalls(tx)
-      : () => this.processPrivateOnlyTx(tx);
+      : async () => [await this.processPrivateOnlyTx(tx), /*ProcessReturnValues*/ []];
 
     // Fake a delay per tx if instructed (used for tests)
     const fakeDelayPerTxMs = this.opts.fakeProcessingDelayPerTxMs;
@@ -490,7 +495,7 @@ export class PublicProcessor implements Traceable {
   @trackSpan('PublicProcessor.processPrivateOnlyTx', (tx: Tx) => ({
     [Attributes.TX_HASH]: tx.getTxHash().toString(),
   }))
-  private async processPrivateOnlyTx(tx: Tx): Promise<[ProcessedTx, undefined]> {
+  private async processPrivateOnlyTx(tx: Tx): Promise<ProcessedTx> {
     const gasFees = this.globalVariables.gasFees;
     const transactionFee = computeTransactionFee(gasFees, tx.data.constants.txContext.gasSettings, tx.data.gasUsed);
 
@@ -515,30 +520,22 @@ export class PublicProcessor implements Traceable {
 
     await this.contractsDB.addNewContracts(tx);
 
-    return [processedTx, undefined];
+    return processedTx;
   }
 
   @trackSpan('PublicProcessor.processTxWithPublicCalls', tx => ({
     [Attributes.TX_HASH]: tx.getTxHash().toString(),
   }))
-  private async processTxWithPublicCalls(tx: Tx): Promise<[ProcessedTx, NestedProcessReturnValues[]]> {
+  private async processTxWithPublicCalls(tx: Tx): Promise<[ProcessedTx, ProcessReturnValues]> {
     const timer = new Timer();
 
-    const { avmProvingRequest, gasUsed, revertCode, revertReason, processedPhases } =
+    const { hints, publicInputs, gasUsed, revertCode, revertReason, appLogicReturnValue } =
       await this.publicTxSimulator.simulate(tx);
 
-    if (!avmProvingRequest) {
+    if (!hints) {
       this.metrics.recordFailedTx();
       throw new Error('Avm proving result was not generated.');
     }
-
-    processedPhases.forEach(phase => {
-      if (phase.reverted) {
-        this.metrics.recordRevertedPhase(phase.phase);
-      } else {
-        this.metrics.recordPhaseDuration(phase.phase, phase.durationMs ?? 0);
-      }
-    });
 
     const contractClassLogs = revertCode.isOK()
       ? tx.getContractClassLogs()
@@ -549,14 +546,32 @@ export class PublicProcessor implements Traceable {
         .map(log => ContractClassPublishedEvent.fromLog(log)),
     );
 
-    const phaseCount = processedPhases.length;
+    // TODO(fcarreiro): remove phaseCount
+    const phaseCount = 1;
     const durationMs = timer.ms();
     this.metrics.recordTx(phaseCount, durationMs, gasUsed.publicGas);
 
-    const processedTx = makeProcessedTxFromTxWithPublicCalls(tx, avmProvingRequest, gasUsed, revertCode, revertReason);
+    const processedTx = makeProcessedTxFromTxWithPublicCalls(
+      tx,
+      PublicProcessor.generateProvingRequest(publicInputs, hints),
+      gasUsed,
+      revertCode,
+      revertReason,
+    );
 
-    const returnValues = processedPhases.find(({ phase }) => phase === TxExecutionPhase.APP_LOGIC)?.returnValues ?? [];
+    return [processedTx, appLogicReturnValue ?? []];
+  }
 
-    return [processedTx, returnValues];
+  /**
+   * Generate the proving request for the AVM circuit.
+   */
+  private static generateProvingRequest(
+    publicInputs: AvmCircuitPublicInputs,
+    hints: AvmExecutionHints,
+  ): AvmProvingRequest {
+    return {
+      type: ProvingRequestType.PUBLIC_VM,
+      inputs: new AvmCircuitInputs(hints, publicInputs),
+    };
   }
 }

@@ -455,7 +455,7 @@ export class TXEOracleTopLevelContext implements IMiscOracle, ITxeExecutionOracl
     targetContractAddress: AztecAddress,
     calldata: Fr[],
     isStaticCall: boolean,
-  ) {
+  ): Promise<Fr[]> {
     this.logger.verbose(
       `Executing public function ${await this.contractDataProvider.getDebugFunctionName(targetContractAddress, FunctionSelector.fromField(calldata[0]))}@${targetContractAddress} isStaticCall=${isStaticCall}`,
     );
@@ -540,10 +540,10 @@ export class TXEOracleTopLevelContext implements IMiscOracle, ITxeExecutionOracl
       checkpoint = await ForkCheckpoint.new(forkedWorldTrees);
     }
 
-    const results = await processor.process([tx]);
+    const [processedTxs, failedTxs, _, allReturnValues] = await processor.process([tx]);
 
-    const [processedTx] = results[0];
-    const failedTxs = results[1];
+    const [processedTx] = processedTxs;
+    const [returnValues] = allReturnValues;
 
     if (failedTxs.length !== 0) {
       throw new Error(`Public execution has failed: ${failedTxs[0].error}`);
@@ -559,14 +559,12 @@ export class TXEOracleTopLevelContext implements IMiscOracle, ITxeExecutionOracl
       }
     }
 
-    const returnValues = results[3][0].values;
-
     if (isStaticCall) {
       await checkpoint!.revert();
 
       await forkedWorldTrees.close();
 
-      return returnValues ?? [];
+      return returnValues;
     }
 
     const txEffect = TxEffect.empty();
@@ -594,7 +592,7 @@ export class TXEOracleTopLevelContext implements IMiscOracle, ITxeExecutionOracl
 
     await forkedWorldTrees.close();
 
-    return returnValues ?? [];
+    return returnValues;
   }
 
   async txeSimulateUtilityFunction(

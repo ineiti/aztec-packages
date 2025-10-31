@@ -112,7 +112,7 @@ export class BatchCall extends BaseContractInteraction {
         const rawReturnValues =
           call.type == FunctionType.PRIVATE
             ? simulatedTx.getPrivateReturnValues()?.nested?.[resultIndex].values
-            : simulatedTx.getPublicReturnValues()?.[resultIndex].values;
+            : simulatedTx.getPublicReturnValues();
 
         results[callIndex] = rawReturnValues ? decodeFromAbi(call.returnTypes, rawReturnValues) : [];
       });

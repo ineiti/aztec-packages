@@ -1,6 +1,8 @@
+import { Fr } from '@aztec/foundation/fields';
 import { type ZodFor, optional } from '@aztec/foundation/schemas';
 import type { FieldsOf } from '@aztec/foundation/types';
 
+import times from 'lodash.times';
 import { z } from 'zod';
 
 import { type ContractArtifact, ContractArtifactSchema } from '../abi/abi.js';
@@ -18,8 +20,42 @@ import {
   collectSortedContractClassLogs,
 } from './private_execution_result.js';
 import { type SimulationStats, SimulationStatsSchema } from './profiling.js';
-import { NestedProcessReturnValues, PublicSimulationOutput } from './public_simulation_output.js';
+import { PublicSimulationOutput } from './public_simulation_output.js';
 import { Tx } from './tx.js';
+
+/** Return values of simulating a circuit. */
+export type ProcessReturnValues = Fr[] | undefined;
+
+/** Return values of simulating complete callstack. */
+export class NestedProcessReturnValues {
+  values: ProcessReturnValues;
+  nested: NestedProcessReturnValues[];
+
+  constructor(values: ProcessReturnValues, nested?: NestedProcessReturnValues[]) {
+    this.values = values;
+    this.nested = nested ?? [];
+  }
+
+  static get schema(): ZodFor<NestedProcessReturnValues> {
+    return z
+      .object({
+        values: z.array(Fr.schema).optional(),
+        nested: z.array(z.lazy(() => NestedProcessReturnValues.schema)),
+      })
+      .transform(({ values, nested }) => new NestedProcessReturnValues(values, nested));
+  }
+
+  static empty() {
+    return new NestedProcessReturnValues([]);
+  }
+
+  static random(depth = 1): NestedProcessReturnValues {
+    return new NestedProcessReturnValues(
+      times(3, Fr.random),
+      depth > 0 ? [NestedProcessReturnValues.random(depth - 1)] : [],
+    );
+  }
+}
 
 /*
  * If passed during the execution of a user circuit, the contract function simulator will replace the instance and class
@@ -145,12 +181,12 @@ export class TxSimulationResult {
   }
 
   getPublicReturnValues() {
-    return this.publicOutput ? this.publicOutput.publicReturnValues : [];
+    return this.publicOutput?.revertReason !== undefined ? this.publicOutput.publicReturnValues : undefined;
   }
 }
 
 /**
- * Recursively accummulate the return values of a call result and its nested executions,
+ * Recursively accumulate the return values of a call result and its nested executions,
  * so they can be retrieved in order.
  * @param executionResult
  * @returns

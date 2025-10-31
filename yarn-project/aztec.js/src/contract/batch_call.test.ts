@@ -209,7 +209,7 @@ describe('BatchCall', () => {
       txSimResult.getPrivateReturnValues.mockReturnValue({
         nested: [{ values: privateReturnValues }],
       } as any);
-      txSimResult.getPublicReturnValues.mockReturnValue([{ values: publicReturnValues }] as any);
+      txSimResult.getPublicReturnValues.mockReturnValue(publicReturnValues);
       wallet.simulateTx.mockResolvedValue(txSimResult);
 
       const results = await batchCall.simulate({ from: await AztecAddress.random() });

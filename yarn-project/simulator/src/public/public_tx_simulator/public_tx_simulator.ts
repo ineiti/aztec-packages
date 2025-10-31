@@ -3,26 +3,11 @@ import { Fr } from '@aztec/foundation/fields';
 import { type Logger, createLogger } from '@aztec/foundation/log';
 import { ProtocolContractAddress, ProtocolContractsList } from '@aztec/protocol-contracts';
 import { computeFeePayerBalanceStorageSlot } from '@aztec/protocol-contracts/fee-juice';
-import {
-  AvmCircuitInputs,
-  AvmCircuitPublicInputs,
-  AvmExecutionHints,
-  type AvmProvingRequest,
-  AvmTxHint,
-  type RevertCode,
-} from '@aztec/stdlib/avm';
+import { AvmExecutionHints, AvmTxHint, type PublicTxResult, type PublicTxSimulatorConfig } from '@aztec/stdlib/avm';
 import { SimulationError } from '@aztec/stdlib/errors';
-import type { Gas, GasUsed } from '@aztec/stdlib/gas';
-import type { DebugLog } from '@aztec/stdlib/logs';
-import { ProvingRequestType } from '@aztec/stdlib/proofs';
+import type { Gas } from '@aztec/stdlib/gas';
 import type { MerkleTreeWriteOperations } from '@aztec/stdlib/trees';
-import {
-  type GlobalVariables,
-  NestedProcessReturnValues,
-  PublicCallRequestWithCalldata,
-  Tx,
-  TxExecutionPhase,
-} from '@aztec/stdlib/tx';
+import { type GlobalVariables, PublicCallRequestWithCalldata, Tx, TxExecutionPhase } from '@aztec/stdlib/tx';
 
 import { strict as assert } from 'assert';
 
@@ -40,33 +25,6 @@ import {
 import type { PublicPersistableStateManager } from '../state_manager/state_manager.js';
 import { PublicTxContext } from './public_tx_context.js';
 import type { PublicTxSimulatorInterface } from './public_tx_simulator_interface.js';
-
-export type ProcessedPhase = {
-  phase: TxExecutionPhase;
-  durationMs?: number;
-  returnValues: NestedProcessReturnValues[];
-  reverted: boolean;
-  revertReason?: SimulationError;
-};
-
-export type PublicTxResult = {
-  avmProvingRequest: AvmProvingRequest;
-  /** Gas used during the execution of this tx */
-  gasUsed: GasUsed;
-  revertCode: RevertCode;
-  /** Revert reason, if any */
-  revertReason?: SimulationError;
-  processedPhases: ProcessedPhase[];
-  logs: DebugLog[];
-};
-
-export type PublicTxSimulatorConfig = {
-  proverId: Fr;
-  doMerkleOperations: boolean;
-  skipFeeEnforcement: boolean;
-  clientInitiatedSimulation: boolean;
-  maxDebugLogMemoryReads: number;
-};
 
 // The errors below are only thrown here in the public tx simulator,
 // and only during revertible phases (revertible insertions, app logic and teardown).
@@ -102,6 +60,12 @@ class TxSimTeardownRevert extends Error {
     this.name = 'TxSimTeardownRevert';
   }
 }
+
+type PhaseResult = {
+  output: Fr[];
+  reverted: boolean;
+  revertReason?: SimulationError;
+};
 
 export class PublicTxSimulator implements PublicTxSimulatorInterface {
   protected log: Logger;
@@ -156,7 +120,7 @@ export class PublicTxSimulator implements PublicTxSimulatorInterface {
     // In that case the transaction will be thrown out.
     await this.insertNonRevertiblesFromPrivate(context);
 
-    const processedPhases: ProcessedPhase[] = [];
+    let appLogicReturnValue: Fr[] | undefined = undefined;
     if (context.hasPhase(TxExecutionPhase.SETUP)) {
       // This will throw if the setup phase reverts.
       // In that case the transaction will be thrown out.
@@ -166,7 +130,6 @@ export class PublicTxSimulator implements PublicTxSimulatorInterface {
           `Setup phase reverted! The transaction will be thrown out. ${setupResult.revertReason?.message}`,
         );
       }
-      processedPhases.push(setupResult);
     }
 
     // The checkpoint we should go back to if anything from now on reverts.
@@ -180,7 +143,7 @@ export class PublicTxSimulator implements PublicTxSimulatorInterface {
       // Only proceed with app logic if there was no revert during revertible insertion.
       if (context.hasPhase(TxExecutionPhase.APP_LOGIC)) {
         const appLogicResult = await this.simulatePhase(TxExecutionPhase.APP_LOGIC, context);
-        processedPhases.push(appLogicResult);
+        appLogicReturnValue = appLogicResult.output;
         if (appLogicResult.reverted) {
           throw new TxSimAppLogicRevert();
         }
@@ -203,7 +166,6 @@ export class PublicTxSimulator implements PublicTxSimulatorInterface {
     try {
       if (context.hasPhase(TxExecutionPhase.TEARDOWN)) {
         const teardownResult = await this.simulatePhase(TxExecutionPhase.TEARDOWN, context);
-        processedPhases.push(teardownResult);
         if (teardownResult.reverted) {
           throw new TxSimTeardownRevert();
         }
@@ -232,12 +194,12 @@ export class PublicTxSimulator implements PublicTxSimulatorInterface {
     await this.payFee(context);
 
     const publicInputs = await context.generateAvmCircuitPublicInputs();
-    const avmProvingRequest = PublicTxSimulator.generateProvingRequest(publicInputs, hints);
 
     const revertCode = context.getFinalRevertCode();
 
     return {
-      avmProvingRequest,
+      hints,
+      publicInputs,
       gasUsed: {
         totalGas: context.getActualGasUsed(),
         teardownGas: context.teardownGasUsed,
@@ -246,7 +208,7 @@ export class PublicTxSimulator implements PublicTxSimulatorInterface {
       },
       revertCode,
       revertReason: context.revertReason,
-      processedPhases: processedPhases,
+      appLogicReturnValue: appLogicReturnValue,
       logs: context.state.getActiveStateManager().getLogs(),
     };
   }
@@ -260,7 +222,7 @@ export class PublicTxSimulator implements PublicTxSimulatorInterface {
    * @param context - WILL BE MUTATED. The context of the currently executing public transaction portion
    * @returns The phase result.
    */
-  protected async simulatePhase(phase: TxExecutionPhase, context: PublicTxContext): Promise<ProcessedPhase> {
+  protected async simulatePhase(phase: TxExecutionPhase, context: PublicTxContext): Promise<PhaseResult> {
     const callRequests = context.getCallRequestsForPhase(phase);
 
     this.log.debug(`Processing phase ${TxExecutionPhase[phase]} for tx ${context.txHash}`, {
@@ -269,32 +231,20 @@ export class PublicTxSimulator implements PublicTxSimulatorInterface {
       callRequests: callRequests.length,
     });
 
-    const returnValues: NestedProcessReturnValues[] = [];
-    let reverted = false;
-    let revertReason: SimulationError | undefined;
-    for (let i = 0; i < callRequests.length; i++) {
-      if (reverted) {
-        break;
-      }
-
-      const callRequest = callRequests[i];
-
+    let result: PhaseResult | undefined = undefined;
+    for (const callRequest of callRequests) {
       const enqueuedCallResult = await this.simulateEnqueuedCall(phase, context, callRequest);
-
-      returnValues.push(new NestedProcessReturnValues(enqueuedCallResult.output));
-
-      if (enqueuedCallResult.reverted) {
-        reverted = true;
-        revertReason = enqueuedCallResult.revertReason;
+      result = {
+        output: enqueuedCallResult.output,
+        reverted: enqueuedCallResult.reverted,
+        revertReason: enqueuedCallResult.revertReason,
+      };
+      if (result.reverted) {
+        break;
       }
     }
 
-    return {
-      phase,
-      returnValues,
-      reverted,
-      revertReason,
-    };
+    return result!;
   }
 
   /**
@@ -524,18 +474,5 @@ export class PublicTxSimulator implements PublicTxSimulatorInterface {
 
     const updatedBalance = currentBalance.sub(txFee);
     await stateManager.writeStorage(feeJuiceAddress, balanceSlot, updatedBalance, true);
-  }
-
-  /**
-   * Generate the proving request for the AVM circuit.
-   */
-  private static generateProvingRequest(
-    publicInputs: AvmCircuitPublicInputs,
-    hints: AvmExecutionHints,
-  ): AvmProvingRequest {
-    return {
-      type: ProvingRequestType.PUBLIC_VM,
-      inputs: new AvmCircuitInputs(hints, publicInputs),
-    };
   }
 }

@@ -1,10 +1,17 @@
 import { type Logger, createLogger } from '@aztec/foundation/log';
 import { avmSimulate, avmSimulateWithHintedDbs } from '@aztec/native';
-import { ProtocolContractsList } from '@aztec/protocol-contracts';
-import { AvmFastSimulationInputs, AvmTxHint, deserializeFromMessagePack } from '@aztec/stdlib/avm';
+import {
+  AvmCircuitInputs,
+  PublicTxResult,
+  type PublicTxSimulatorConfig,
+  ProtocolContractsList } from '@aztec/protocol-contracts';
+import { AvmFastSimulationInputs, AvmTxHint, deserializeFromMessagePack,
+} from '@aztec/stdlib/avm';
 import { SimulationError } from '@aztec/stdlib/errors';
 import type { MerkleTreeWriteOperations } from '@aztec/stdlib/trees';
 import type { GlobalVariables, StateReference, Tx } from '@aztec/stdlib/tx';
+
+import { strict as assert } from 'assert';
 import { WorldStateRevisionWithHandle } from '@aztec/stdlib/world-state';
 
 import { strict as assert } from 'assert';
@@ -12,7 +19,7 @@ import { strict as assert } from 'assert';
 import type { ExecutorMetricsInterface } from '../executor_metrics_interface.js';
 import type { PublicContractsDB } from '../public_db_sources.js';
 import { ContractProviderForCpp } from './contract_provider_for_cpp.js';
-import { type PublicTxResult, PublicTxSimulator, type PublicTxSimulatorConfig } from './public_tx_simulator.js';
+import { PublicTxSimulator } from './public_tx_simulator.js';
 import type {
   MeasuredPublicTxSimulatorInterface,
   PublicTxSimulatorInterface,
@@ -202,7 +209,7 @@ export class CppPublicTxSimulatorHintedDbs extends PublicTxSimulator implements 
     this.log.debug(`TS simulation succeeded for tx ${txHash}`);
 
     // Extract the full AvmCircuitInputs from the TS result
-    const avmCircuitInputs = tsResult.avmProvingRequest.inputs;
+    const avmCircuitInputs = new AvmCircuitInputs(tsResult.hints!, tsResult.publicInputs);
 
     // Second, run C++ simulation with hinted DBs
     this.log.debug(`Running C++ simulation with hinted DBs for tx ${txHash}`);
@@ -218,7 +225,11 @@ export class CppPublicTxSimulatorHintedDbs extends PublicTxSimulator implements 
     }
 
     // Deserialize the msgpack result
-    const _success = deserializeFromMessagePack<boolean>(resultBuffer);
+    const cppResultJSON: object = deserializeFromMessagePack(resultBuffer);
+    const cppResult = PublicTxResult.fromJSON(cppResultJSON);
+
+    assert(cppResult.revertCode.equals(tsResult.revertCode));
+    assert(cppResult.gasUsed.totalGas.equals(tsResult.gasUsed.totalGas));
 
     this.log.debug(`C++ hinted simulation completed for tx ${txHash}`, {
       txHash,
@@ -227,7 +238,7 @@ export class CppPublicTxSimulatorHintedDbs extends PublicTxSimulator implements 
       cppGasUsed: tsResult.gasUsed.totalGas.l2Gas,
     });
 
-    // TODO(dbanks12): C++ should return PublicTxResult (or something similar)
+    // TODO(fcarreiro): complete this.
     return tsResult;
   }
 }

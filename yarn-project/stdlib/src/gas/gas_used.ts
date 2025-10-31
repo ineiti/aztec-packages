@@ -1,6 +1,6 @@
 import type { Gas } from './gas.js';
 
-export interface GasUsed {
+export type GasUsed = {
   /**
    * Total gas used across both private and public executions.
    * Note that this does not determine the transaction fee. The fee is calculated with billedGas, which uses `teardownGasLimits` from
@@ -20,4 +20,4 @@ export interface GasUsed {
    * The gas billed for the transaction. This uses teardown gas limit instead of actual teardown gas.
    */
   billedGas: Gas;
-}
+};

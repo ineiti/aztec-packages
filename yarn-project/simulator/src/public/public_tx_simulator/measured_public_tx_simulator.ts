@@ -1,21 +1,17 @@
 import type { Fr } from '@aztec/foundation/fields';
 import { Timer } from '@aztec/foundation/timer';
+import type { PublicTxResult, PublicTxSimulatorConfig } from '@aztec/stdlib/avm';
 import type { Gas } from '@aztec/stdlib/gas';
 import type { AvmSimulationStats } from '@aztec/stdlib/stats';
 import type { MerkleTreeWriteOperations } from '@aztec/stdlib/trees';
-import { type GlobalVariables, PublicCallRequestWithCalldata, Tx, TxExecutionPhase } from '@aztec/stdlib/tx';
+import { type GlobalVariables, PublicCallRequestWithCalldata, Tx } from '@aztec/stdlib/tx';
 
 import type { AvmFinalizedCallResult } from '../avm/avm_contract_call_result.js';
 import type { ExecutorMetricsInterface } from '../executor_metrics_interface.js';
 import type { PublicContractsDB } from '../public_db_sources.js';
 import type { PublicPersistableStateManager } from '../state_manager/state_manager.js';
 import { PublicTxContext } from './public_tx_context.js';
-import {
-  type ProcessedPhase,
-  type PublicTxResult,
-  PublicTxSimulator,
-  type PublicTxSimulatorConfig,
-} from './public_tx_simulator.js';
+import { PublicTxSimulator } from './public_tx_simulator.js';
 import type { MeasuredPublicTxSimulatorInterface } from './public_tx_simulator_interface.js';
 
 /**
@@ -53,13 +49,6 @@ export class MeasuredPublicTxSimulator extends PublicTxSimulator implements Meas
     const timer = new Timer();
     await super.insertRevertiblesFromPrivate(context);
     this.metrics.recordPrivateEffectsInsertion(timer.us(), 'revertible');
-  }
-
-  protected override async simulatePhase(phase: TxExecutionPhase, context: PublicTxContext): Promise<ProcessedPhase> {
-    const timer = new Timer();
-    const result = await super.simulatePhase(phase, context);
-    result.durationMs = timer.ms();
-    return result;
   }
 
   protected override async simulateEnqueuedCallInternal(
