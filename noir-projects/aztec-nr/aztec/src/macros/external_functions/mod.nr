@@ -3,30 +3,18 @@ mod private;
 mod public;
 mod utility;
 
-use private::process_external_private_function;
-use public::process_external_public_function;
-use utility::process_external_utility_function;
+use private::process_private_function;
+use public::process_public_function;
+use utility::process_utility_function;
 
-pub(crate) comptime fn process_external_functions(m: Module) {
-    let external_private_functions = registry::EXTERNAL_PRIVATE_REGISTRY.get(m);
-    let external_public_functions = registry::EXTERNAL_PUBLIC_REGISTRY.get(m);
-    let external_utility_functions = registry::EXTERNAL_UTILITY_REGISTRY.get(m);
+pub(crate) comptime fn process_functions(m: Module) -> Quoted {
+    let private_functions = process_private_functions(m);
+    let public_functions = process_public_functions(m);
+    let utility_functions = process_utility_functions(m);
 
-    if external_private_functions.is_some() {
-        for f in external_private_functions.unwrap() {
-            process_external_private_function(f);
-        }
-    }
-
-    if external_public_functions.is_some() {
-        for f in external_public_functions.unwrap() {
-            process_external_public_function(f);
-        }
-    }
-
-    if external_utility_functions.is_some() {
-        for f in external_utility_functions.unwrap() {
-            process_external_utility_function(f);
-        }
+    quote {
+        $private_functions
+        $public_functions
+        $utility_functions
     }
 }
