@@ -14,6 +14,11 @@ export async function createAsyncBackend(
   options: BackendOptions,
   logger: (msg: string) => void,
 ): Promise<Barretenberg> {
+  options = {
+    ...options,
+    wasmPath: options.wasmPath ?? process.env.BB_WASM_PATH,
+  };
+
   switch (type) {
     case BackendType.NativeUnixSocket: {
       const bbPath = findBbBinary(options.bbPath);
@@ -73,6 +78,11 @@ export async function createSyncBackend(
   options: BackendOptions,
   logger: (msg: string) => void,
 ): Promise<BarretenbergSync> {
+  options = {
+    ...options,
+    wasmPath: options.wasmPath ?? process.env.BB_WASM_PATH,
+  };
+
   switch (type) {
     case BackendType.NativeSharedMemory: {
       const bbPath = findBbBinary(options.bbPath);
