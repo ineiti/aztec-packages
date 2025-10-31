@@ -290,10 +290,8 @@ export abstract class BBPrivateKernelProver implements PrivateKernelProver {
 
   public async computeGateCountForCircuit(_bytecode: Buffer, _circuitName: string): Promise<number> {
     // Note we do not pass the vk to the backend. This is unneeded for gate counts.
-    const backend = new AztecClientBackend([ungzip(_bytecode)], Barretenberg.getSingleton());
-
+    const backend = new AztecClientBackend([ungzip(_bytecode)], await Barretenberg.initSingleton());
     const gateCount = await backend.gates();
-
     return gateCount[0];
   }
 }
