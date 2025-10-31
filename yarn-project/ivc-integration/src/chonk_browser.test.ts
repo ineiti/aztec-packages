@@ -70,10 +70,26 @@ describe('Chonk Integration - Browser with Puppeteer', () => {
     logger.info(`Test server started on ${serverUrl}`);
 
     // Launch Puppeteer browser
-    browser = await puppeteer.launch({
+    // Use Playwright's chromium if available (for CI compatibility)
+    const launchOptions: any = {
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    });
+    };
+
+    // Try to use Playwright's chromium executable if Puppeteer's Chrome isn't available
+    try {
+      const { chromium } = await import('playwright');
+      const playwrightPath = chromium.executablePath();
+      if (existsSync(playwrightPath)) {
+        logger.info(`Using Playwright's chromium at: ${playwrightPath}`);
+        launchOptions.executablePath = playwrightPath;
+      }
+    } catch {
+      // Playwright not available or chromium path not found, fall back to Puppeteer's default
+      logger.info("Using Puppeteer's default Chrome");
+    }
+
+    browser = await puppeteer.launch(launchOptions);
     logger.info('Browser launched');
   });
 
