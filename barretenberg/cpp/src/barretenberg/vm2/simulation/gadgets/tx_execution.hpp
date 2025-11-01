@@ -53,6 +53,8 @@ class TxExecution final {
 
     const TxContext& get_tx_context() const { return tx_context; }
 
+    const TxContext& get_tx_context() const { return tx_context; }
+
   private:
     ExecutionInterface& call_execution;
     ContextProviderInterface& context_provider;
