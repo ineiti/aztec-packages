@@ -7,6 +7,24 @@ use crate::macros::functions::{
 };
 use registry::{get_private_functions, get_public_functions, get_utility_functions};
 
+comptime fn make_functions_uncallable<let N: u32>(
+    functions: [FunctionDefinition],
+    error_message_template: str<N>,
+) {
+    let return_type = quote { () }.as_type();
+
+    functions.for_each(|function| {
+        let name = function.name();
+        let error_message = f"{error_message_template}{name}. Please see the documentation for instructions on the proper invocation of functions: INCLUDE_LINK_HERE";
+        let body = quote {
+            std::static_assert(false, $error_message);
+        };
+        let body_expr = body.as_expr().expect(f"Body is not an expression: {body}");
+        function.set_body(body_expr);
+        function.set_return_type(return_type);
+    });
+}
+
 pub(crate) comptime fn process_functions(m: Module) -> Quoted {
     let private_functions = get_private_functions(m);
     let public_functions = get_public_functions(m);
@@ -22,38 +40,18 @@ pub(crate) comptime fn process_functions(m: Module) -> Quoted {
     // Now that we have generated quotes of the new functions based on the original function definitions, we replace
     // the original functions' bodies with `static_assert(false, ...)` to prevent them from being called directly
     // from within the contract. We also need to set the return type to `()` to avoid compilation errors.
-    let return_type = quote { () }.as_type();
-
-    private_functions.for_each(|function| {
-        let name = function.name();
-        let error_message = f"Direct invocation of private functions is not supported. You attempted to call {name}. Please see the documentation for instructions on the proper invocation of private functions: INCLUDE_LINK_HERE";
-        let body = quote {
-            std::static_assert(false, $error_message);
-        };
-        let body_expr = body.as_expr().expect(f"Body is not an expression: {body}");
-        function.set_body(body_expr);
-        function.set_return_type(return_type);
-    });
-    public_functions.for_each(|function| {
-        let name = function.name();
-        let error_message = f"Direct invocation of public functions is not supported. You attempted to call {name}. Please see the documentation for instructions on the proper invocation of public functions: INCLUDE_LINK_HERE";
-        let body = quote {
-            std::static_assert(false, $error_message);
-        };
-        let body_expr = body.as_expr().expect(f"Body is not an expression: {body}");
-        function.set_body(body_expr);
-        function.set_return_type(return_type);
-    });
-    utility_functions.for_each(|function| {
-        let name = function.name();
-        let error_message = f"Calling utility functions directly from within the contract is not supported. You attempted to call {name}. Please see the documentation for instructions on the proper use of utility functions: INCLUDE_LINK_HERE";
-        let body = quote {
-            std::static_assert(false, $error_message);
-        };
-        let body_expr = body.as_expr().expect(f"Body is not an expression: {body}");
-        function.set_body(body_expr);
-        function.set_return_type(return_type);
-    });
+    make_functions_uncallable(
+        private_functions,
+        "Direct invocation of private functions is not supported. You attempted to call ",
+    );
+    make_functions_uncallable(
+        public_functions,
+        "Direct invocation of public functions is not supported. You attempted to call ",
+    );
+    make_functions_uncallable(
+        utility_functions,
+        "Calling utility functions directly from within the contract is not supported. You attempted to call ",
+    );
 
     // We return the new functions' quotes to be injected into the contract.
     quote {
