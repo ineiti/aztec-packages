@@ -15,8 +15,12 @@ comptime fn make_functions_uncallable<let N: u32>(
 
     functions.for_each(|function| {
         let name = function.name();
+        // The body of the function will contain a static_assert(false, ...) to prevent the function from being called
+        // directly and a std::mem::zeroed() to make the compilation fail on the static_assert and not on a missing
+        // return value.
         let error_message = f"{error_message_template}{name}. Please see the documentation for instructions on the proper invocation of functions: INCLUDE_LINK_HERE";
-        let body = f"std::static_assert(false, \"{error_message}\");".quoted_contents();
+        let body = f"{{ std::static_assert(false, \"{error_message}\"); std::mem::zeroed() }}"
+            .quoted_contents();
         let body_expr = body.as_expr().expect(f"Body is not an expression: {body}");
 
         // Prefix all parameter names with "_" to suppress unused variable warnings
@@ -28,10 +32,13 @@ comptime fn make_functions_uncallable<let N: u32>(
 
         function.set_body(body_expr);
         function.set_parameters(prefixed_params);
-        function.set_return_type(return_type);
         // We need to add the `contract_library_method` attribute to the function to prevent this function from being
         // compiled as an entrypoint function (function that's compiled as its own circuit).
         function.add_attribute("contract_library_method");
+
+        // Contract functions need to have a public return type so we mark it as such to avoid undesired compilation
+        // errors.
+        function.set_return_public(true);
     });
 }
 
