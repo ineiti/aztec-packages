@@ -1,3 +1,4 @@
+pub mod abi_marker_attributes;
 pub(crate) mod registry;
 
 use crate::macros::functions::{
@@ -23,24 +24,27 @@ pub(crate) comptime fn process_functions(m: Module) -> Quoted {
     // from within the contract.
     private_functions.for_each(|function| {
         let name = function.name();
+        let error_message = f"Direct invocation of private functions is not supported. You attempted to call {name}. Please see the documentation for instructions on the proper invocation of private functions: INCLUDE_LINK_HERE";
         let body = quote {
-            static_assert(false, f"Direct invocation of private functions is not supported. You attempted to call {name}. Please see the documentation for instructions on the proper invocation of private functions: INCLUDE_LINK_HERE");
+            std::static_assert(false, $error_message);
         };
         let body_expr = body.as_expr().expect(f"Body is not an expression: {body}");
         function.set_body(body_expr);
     });
     public_functions.for_each(|function| {
         let name = function.name();
+        let error_message = f"Direct invocation of public functions is not supported. You attempted to call {name}. Please see the documentation for instructions on the proper invocation of public functions: INCLUDE_LINK_HERE";
         let body = quote {
-            static_assert(false, f"Direct invocation of public functions is not supported. You attempted to call {name}. Please see the documentation for instructions on the proper invocation of public functions: INCLUDE_LINK_HERE");
+            std::static_assert(false, $error_message);
         };
         let body_expr = body.as_expr().expect(f"Body is not an expression: {body}");
         function.set_body(body_expr);
     });
     utility_functions.for_each(|function| {
         let name = function.name();
+        let error_message = f"Calling utility functions directly from within the contract is not supported. You attempted to call {name}. Please see the documentation for instructions on the proper use of utility functions: INCLUDE_LINK_HERE";
         let body = quote {
-            static_assert(false, f"Calling utility functions directly from within the contract is not supported. You attempted to call {name}. Please see the documentation for instructions on the proper use of utility functions: INCLUDE_LINK_HERE");
+            std::static_assert(false, $error_message);
         };
         let body_expr = body.as_expr().expect(f"Body is not an expression: {body}");
         function.set_body(body_expr);

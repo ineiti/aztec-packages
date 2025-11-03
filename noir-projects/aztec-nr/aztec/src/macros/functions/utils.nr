@@ -29,11 +29,11 @@ pub(crate) comptime fn transform_private(f: FunctionDefinition) -> Quoted {
     // about the execution context (e.g. the caller).
     let original_params = f.parameters();
 
-    let generated_function_params = &[(
-        quote { inputs },
-        quote { crate::context::inputs::private_context_inputs::PrivateContextInputs }.as_type(),
-    )]
-        .append(original_params);
+    let original_params_quotes = original_params
+        .map(|(param_name, param_type)| quote { $param_name: $param_type })
+        .join(quote {, });
+
+    let params = quote { inputs: aztec::context::inputs::private_context_inputs::PrivateContextInputs, $original_params_quotes };
 
     let mut body = f.body().as_block().unwrap();
 
@@ -72,19 +72,21 @@ pub(crate) comptime fn transform_private(f: FunctionDefinition) -> Quoted {
         };
     };
 
-    let function_name = f.name();
+    let original_function_name = f.name();
 
     // Modifications introduced by the different marker attributes.
     let internal_check = if is_fn_only_self(f) {
-        let assertion_message = f"Function {function_name} can only be called by the same contract";
+        let assertion_message =
+            f"Function {original_function_name} can only be called by the same contract";
         quote { assert(self.msg_sender().unwrap() == self.address, $assertion_message); }
     } else {
         quote {}
     };
 
     let view_check = if is_fn_view(f) {
-        let assertion_message =
-            f"Function {function_name} can only be called statically".as_ctstring().as_quoted_str();
+        let assertion_message = f"Function {original_function_name} can only be called statically"
+            .as_ctstring()
+            .as_quoted_str();
         quote { assert(self.context.inputs.call_context.is_static_call, $assertion_message); }
     } else {
         quote {}
@@ -165,8 +167,12 @@ pub(crate) comptime fn transform_private(f: FunctionDefinition) -> Quoted {
 
     let context_finish = quote { self.context.finish() };
 
+    let internal_fn_name = f"__aztec_nr_internals__{original_function_name}".quoted_contents();
+    let body_quote = body.map(|expr| expr.quoted()).join(quote { });
+
     quote {
-        fn __aztec_nr_internals__$function_name($generated_function_params) -> aztec::protocol_types::abis::private_circuit_public_inputs::PrivateCircuitPublicInputs {
+        #[aztec::macros::external_functions::abi_marker_attributes::abi_private]
+        fn $internal_fn_name($params) -> aztec::protocol_types::abis::private_circuit_public_inputs::PrivateCircuitPublicInputs {
             aztec::oracle::version::assert_compatible_oracle_version();
             $contract_self_creation
             $assert_initializer
@@ -176,8 +182,7 @@ pub(crate) comptime fn transform_private(f: FunctionDefinition) -> Quoted {
             $message_discovery_call
             $authorize_once_check
 
-            $body
-
+            $body_quote
 
             $return_value
             $mark_as_initialized
@@ -241,19 +246,21 @@ pub(crate) comptime fn transform_public(f: FunctionDefinition) -> Quoted {
         };
     };
 
-    let function_name = f.name();
+    let original_function_name = f.name();
 
     // Modifications introduced by the different marker attributes.
     let internal_check = if is_fn_only_self(f) {
-        let assertion_message = f"Function {function_name} can only be called by the same contract";
+        let assertion_message =
+            f"Function {original_function_name} can only be called by the same contract";
         quote { assert(self.msg_sender().unwrap() == self.address, $assertion_message); }
     } else {
         quote {}
     };
 
     let view_check = if is_fn_view(f) {
-        let assertion_message =
-            f"Function {function_name} can only be called statically".as_ctstring().as_quoted_str();
+        let assertion_message = f"Function {original_function_name} can only be called statically"
+            .as_ctstring()
+            .as_quoted_str();
         quote { assert(self.context.is_static_call(), $assertion_message); }
     } else {
         quote {}
@@ -298,11 +305,17 @@ pub(crate) comptime fn transform_public(f: FunctionDefinition) -> Quoted {
     let body = f.body().as_block().unwrap();
     let return_type = f.return_type();
 
+    // New function parameters are the same as the original function's ones.
+    let params = original_params
+        .map(|(param_name, param_type)| quote { $param_name: $param_type })
+        .join(quote {, });
+
     // All public functions are automatically made unconstrained, even if they were not marked as such. This is because
     // instead of compiling into a circuit, they will compile to bytecode that will be later transpiled into AVM
     // bytecode.
     quote {
-        unconstrained fn __aztec_nr_internals__$function_name($generated_function_params) -> pub $return_type {
+        #[aztec::macros::external_functions::abi_marker_attributes::abi_public]
+        unconstrained fn __aztec_nr_internals__$original_function_name($params) -> pub $return_type {
             $to_prepend
             $body
             $to_append
@@ -352,10 +365,16 @@ pub(crate) comptime fn transform_utility(f: FunctionDefinition) -> Quoted {
     };
     let body = f.body().as_block().unwrap();
 
+    let original_function_name = f.name();
+    let params = f
+        .parameters()
+        .map(|(param_name, param_type)| quote { $param_name: $param_type })
+        .join(quote {, });
     let return_type = f.return_type();
 
     quote {
-        unconstrained fn __aztec_nr_internals__$function_name() -> pub $return_type {
+        #[aztec::macros::external_functions::abi_marker_attributes::abi_utility]
+        unconstrained fn __aztec_nr_internals__$original_function_name($params) -> pub $return_type {
             $to_prepend
             $body
         }

@@ -155,7 +155,6 @@ pub comptime fn external(f: FunctionDefinition, f_type: CtString) {
         panic(
             f"Function '{function_name}' is marked as #[external(\"{f_type}\")], but '{f_type}' is not a valid external function type. External functions must be one of 'private', 'public' or 'utility'",
         );
-        quote {}
     }
 }
 

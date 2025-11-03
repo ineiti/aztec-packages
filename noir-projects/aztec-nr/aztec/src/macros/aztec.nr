@@ -273,6 +273,7 @@ comptime fn generate_sync_private_state() -> Quoted {
             return_type: ()
         }
 
+        #[aztec::macros::external_functions::abi_marker_attributes::abi_utility]
         unconstrained fn sync_private_state() {
             let context = dep::aztec::context::utility_context::UtilityContext::new();
             /// Safety: message discovery returns nothing and is performed solely for its side-effects. It is therefore
@@ -300,6 +301,7 @@ comptime fn generate_process_message() -> Quoted {
             return_type: ()
         }
 
+        #[aztec::macros::external_functions::abi_marker_attributes::abi_utility]
         unconstrained fn process_message(
             message_ciphertext: BoundedVec<Field, aztec::messages::encoding::MESSAGE_CIPHERTEXT_LEN>,
             message_context: aztec::messages::processing::message_context::MessageContext,

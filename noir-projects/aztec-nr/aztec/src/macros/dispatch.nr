@@ -104,10 +104,8 @@ pub comptime fn generate_public_dispatch(m: Module) -> Quoted {
         let dispatch = ifs.join(quote {  });
 
         let body = quote {
-            // We mark this as public because our whole system depends on public
-            // functions having this attribute. However, the public MACRO will
-            // handle the public_dispatch function specially and do nothing.
-            #[external("public")]
+            // We mark this as public because our whole system depends on public functions having this attribute.
+            #[aztec::macros::external_functions::abi_marker_attributes::abi_public]
             pub unconstrained fn public_dispatch(selector: Field) {
                 $dispatch
             }
