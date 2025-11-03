@@ -35,14 +35,14 @@ pub(crate) comptime fn add_utility_function(f: FunctionDefinition) {
     add_to_registry(&mut UTILITY_REGISTRY, f);
 }
 
-pub(crate) comptime fn get_private_functions(m: Module) -> Option<[FunctionDefinition]> {
-    PRIVATE_REGISTRY.get(m)
+pub(crate) comptime fn get_private_functions(m: Module) -> [FunctionDefinition] {
+    PRIVATE_REGISTRY.get(m).unwrap_or(&[])
 }
 
-pub(crate) comptime fn get_public_functions(m: Module) -> Option<[FunctionDefinition]> {
-    PUBLIC_REGISTRY.get(m)
+pub(crate) comptime fn get_public_functions(m: Module) -> [FunctionDefinition] {
+    PUBLIC_REGISTRY.get(m).unwrap_or(&[])
 }
 
-pub(crate) comptime fn get_utility_functions(m: Module) -> Option<[FunctionDefinition]> {
-    UTILITY_REGISTRY.get(m)
+pub(crate) comptime fn get_utility_functions(m: Module) -> [FunctionDefinition] {
+    UTILITY_REGISTRY.get(m).unwrap_or(&[])
 }

@@ -1,6 +1,6 @@
 pub mod aztec;
 pub mod dispatch;
-mod external_functions;
+pub mod external_functions;
 pub mod functions;
 pub mod utils;
 pub mod notes;

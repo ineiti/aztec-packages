@@ -138,9 +138,9 @@ pub comptime fn authorize_once(
 /// Same as in Solidity external functions are functions that our callable from outside the contract. External
 /// functions can be either private, public, or utility.
 ///
-/// In this function we also perform some basic checks on the function to ensure it is valid and then we add the
-/// function to the external functions registry for later processing by the `#[aztec]` macro.
-pub comptime fn external(f: FunctionDefinition, f_type: CtString) -> Quoted {
+/// In this function we perform basic checks on the function to ensure it is valid and then we add the function to the
+/// external functions registry for later processing by the `#[aztec]` macro.
+pub comptime fn external(f: FunctionDefinition, f_type: CtString) {
     if f_type.eq("private") {
         assert_valid_private(f);
         add_private_function(f);
@@ -160,7 +160,7 @@ pub comptime fn external(f: FunctionDefinition, f_type: CtString) -> Quoted {
 }
 
 /// Private functions are executed client-side and preserve privacy.
-comptime fn assert_valid_private(f: FunctionDefinition) -> Quoted {
+comptime fn assert_valid_private(f: FunctionDefinition) {
     let visibility = f.visibility();
     if visibility != quote {} {
         let name = f.name();
@@ -178,7 +178,7 @@ comptime fn assert_valid_private(f: FunctionDefinition) -> Quoted {
 }
 
 /// Public functions are executed sequencer-side and do not preserve privacy, similar to the EVM.
-comptime fn assert_valid_public(f: FunctionDefinition) -> Quoted {
+comptime fn assert_valid_public(f: FunctionDefinition) {
     let visibility = f.visibility();
     if visibility != quote {} {
         let name = f.name();
@@ -198,7 +198,7 @@ comptime fn assert_valid_public(f: FunctionDefinition) -> Quoted {
 /// Utility functions are standalone unconstrained functions that cannot be called from another function in a contract.
 /// They are typically used either to obtain some information from the contract (e.g. token balance of a user) or to
 /// modify internal contract-related state of PXE (e.g. processing logs in Aztec.nr during sync).
-comptime fn assert_valid_utility(f: FunctionDefinition) -> Quoted {
+comptime fn assert_valid_utility(f: FunctionDefinition) {
     let visibility = f.visibility();
     if visibility != quote {} {
         let name = f.name();

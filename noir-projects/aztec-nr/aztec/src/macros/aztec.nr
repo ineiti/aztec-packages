@@ -37,13 +37,7 @@ pub comptime fn aztec(m: Module) -> Quoted {
     let sync_private_state_fn_and_abi_export = if !m.functions().any(|f| {
         f.name() == quote { sync_private_state }
     }) {
-        let sync_private_state_fn_quote = generate_sync_private_state();
-        let sync_private_state_fn = sync_private_state_fn_quote.as_type().as_function().unwrap();
-        let sync_private_state_abi_export = create_fn_abi_export(sync_private_state_fn);
-        quote {
-            $sync_private_state_fn_quote
-            $sync_private_state_abi_export
-        }
+        generate_sync_private_state()
     } else {
         quote {}
     };
@@ -51,13 +45,7 @@ pub comptime fn aztec(m: Module) -> Quoted {
     let process_message_fn_and_abi_export = if !m.functions().any(|f| {
         f.name() == quote { process_message }
     }) {
-        let process_message_fn_quote = generate_process_message();
-        let process_message_fn = process_message_fn_quote.as_type().as_function().unwrap();
-        let process_message_abi_export = create_fn_abi_export(process_message_fn);
-        quote {
-            $process_message_fn_quote
-            $process_message_abi_export
-        }
+        generate_process_message()
     } else {
         quote {}
     };
@@ -276,9 +264,15 @@ comptime fn generate_contract_library_method_compute_note_hash_and_nullifier() -
 }
 
 comptime fn generate_sync_private_state() -> Quoted {
-    let message_discovery_call = create_message_discovery_call();
-
     quote {
+        pub struct sync_private_state_parameters {}
+
+        #[abi(functions)]
+        pub struct sync_private_state_abi {
+            parameters: sync_private_state_parameters,
+            return_type: ()
+        }
+
         unconstrained fn sync_private_state() {
             let context = dep::aztec::context::utility_context::UtilityContext::new();
             /// Safety: message discovery returns nothing and is performed solely for its side-effects. It is therefore
@@ -295,6 +289,17 @@ comptime fn generate_sync_private_state() -> Quoted {
 
 comptime fn generate_process_message() -> Quoted {
     quote {
+        pub struct process_message_parameters {
+            pub message_ciphertext: BoundedVec<Field, aztec::messages::encoding::MESSAGE_CIPHERTEXT_LEN>,
+            pub message_context: aztec::messages::processing::message_context::MessageContext,
+        }
+
+        #[abi(functions)]
+        pub struct process_message_abi {
+            parameters: process_message_parameters,
+            return_type: ()
+        }
+
         unconstrained fn process_message(
             message_ciphertext: BoundedVec<Field, aztec::messages::encoding::MESSAGE_CIPHERTEXT_LEN>,
             message_context: aztec::messages::processing::message_context::MessageContext,
