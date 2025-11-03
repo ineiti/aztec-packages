@@ -167,12 +167,12 @@ pub(crate) comptime fn transform_private(f: FunctionDefinition) -> Quoted {
 
     let context_finish = quote { self.context.finish() };
 
-    let internal_fn_name = f"__aztec_nr_internals__{original_function_name}".quoted_contents();
+    let fn_name = f"__aztec_nr_internals__{original_function_name}".quoted_contents();
     let body_quote = body.map(|expr| expr.quoted()).join(quote { });
 
     quote {
         #[aztec::macros::external_functions::abi_marker_attributes::abi_private]
-        fn $internal_fn_name($params) -> pub aztec::protocol_types::abis::private_circuit_public_inputs::PrivateCircuitPublicInputs {
+        fn $fn_name($params) -> pub aztec::protocol_types::abis::private_circuit_public_inputs::PrivateCircuitPublicInputs {
             aztec::oracle::version::assert_compatible_oracle_version();
             $contract_self_creation
             $assert_initializer
@@ -302,7 +302,8 @@ pub(crate) comptime fn transform_public(f: FunctionDefinition) -> Quoted {
         $mark_as_initialized
     };
 
-    let body = f.body().as_block().unwrap();
+    let fn_name = f"__aztec_nr_internals__{original_function_name}".quoted_contents();
+    let body = f.body();
     let return_type = f.return_type();
 
     // New function parameters are the same as the original function's ones.
@@ -315,7 +316,7 @@ pub(crate) comptime fn transform_public(f: FunctionDefinition) -> Quoted {
     // bytecode.
     quote {
         #[aztec::macros::external_functions::abi_marker_attributes::abi_public]
-        unconstrained fn __aztec_nr_internals__$original_function_name($params) -> pub $return_type {
+        unconstrained fn $fn_name($params) -> pub $return_type {
             $to_prepend
             $body
             $to_append
