@@ -187,6 +187,8 @@ pub(crate) comptime fn transform_private(f: FunctionDefinition) -> Quoted {
 }
 
 pub(crate) comptime fn transform_public(f: FunctionDefinition) {
+    // TODO(benesjan): This function should only generate the new function's quote. Move the following to a different
+    // place.
     register_public_fn_stubs(f);
 
     let module_has_initializer = module_has_initializer(f.module());
@@ -294,19 +296,15 @@ pub(crate) comptime fn transform_public(f: FunctionDefinition) {
     };
 
     let body = f.body().as_block().unwrap();
-    let modified_body = modify_fn_body(body, to_prepend, to_append);
-    f.set_body(modified_body);
+    let return_type = f.return_type();
 
     // All public functions are automatically made unconstrained, even if they were not marked as such. This is because
     // instead of compiling into a circuit, they will compile to bytecode that will be later transpiled into AVM
     // bytecode.
-    f.set_unconstrained(true);
-    f.set_return_public(true);
-
     quote {
-        fn $function_name($generated_function_params) {
+        unconstrained fn __aztec_nr_internals__$function_name($generated_function_params) -> pub $return_type {
             $to_prepend
-            $modified_body
+            $body
             $to_append
         }
     }
