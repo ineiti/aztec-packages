@@ -8,8 +8,8 @@ use crate::macros::{
     notes::NOTES,
     utils::{
         fn_has_authorize_once, fn_has_noinitcheck, is_fn_contract_library_method, is_fn_external,
-        is_fn_initializer, is_fn_only_self, is_fn_test, is_fn_view, modify_fn_body,
-        module_has_initializer, module_has_storage,
+        is_fn_initializer, is_fn_only_self, is_fn_test, is_fn_view, module_has_initializer,
+        module_has_storage,
     },
 };
 use dep::protocol_types::meta::utils::derive_serialization_quotes;
@@ -186,7 +186,7 @@ pub(crate) comptime fn transform_private(f: FunctionDefinition) -> Quoted {
     }
 }
 
-pub(crate) comptime fn transform_public(f: FunctionDefinition) {
+pub(crate) comptime fn transform_public(f: FunctionDefinition) -> Quoted {
     // TODO(benesjan): This function should only generate the new function's quote. Move the following to a different
     // place.
     register_public_fn_stubs(f);
@@ -310,7 +310,9 @@ pub(crate) comptime fn transform_public(f: FunctionDefinition) {
     }
 }
 
-pub(crate) comptime fn transform_utility(f: FunctionDefinition) {
+pub(crate) comptime fn transform_utility(f: FunctionDefinition) -> Quoted {
+    // TODO(benesjan): This function should only generate the new function's quote. Move the following to a different
+    // place.
     register_utility_fn_stub(f);
 
     // Initialize Storage if module has storage
@@ -349,10 +351,15 @@ pub(crate) comptime fn transform_utility(f: FunctionDefinition) {
         $message_discovery_call
     };
     let body = f.body().as_block().unwrap();
-    let modified_body = modify_fn_body(body, to_prepend, quote {});
-    f.set_body(modified_body);
 
-    f.set_return_public(true);
+    let return_type = f.return_type();
+
+    quote {
+        unconstrained fn __aztec_nr_internals__$function_name() -> pub $return_type {
+            $to_prepend
+            $body
+        }
+    }
 }
 
 /// Injects a call to `aztec::messages::discovery::discover_new_messages`, causing for new notes to be added to PXE and made
