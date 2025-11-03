@@ -21,7 +21,9 @@ pub(crate) comptime fn process_functions(m: Module) -> Quoted {
 
     // Now that we have generated quotes of the new functions based on the original function definitions, we replace
     // the original functions' bodies with `static_assert(false, ...)` to prevent them from being called directly
-    // from within the contract.
+    // from within the contract. We also need to set the return type to `()` to avoid compilation errors.
+    let return_type = quote { () }.as_type();
+
     private_functions.for_each(|function| {
         let name = function.name();
         let error_message = f"Direct invocation of private functions is not supported. You attempted to call {name}. Please see the documentation for instructions on the proper invocation of private functions: INCLUDE_LINK_HERE";
@@ -30,6 +32,7 @@ pub(crate) comptime fn process_functions(m: Module) -> Quoted {
         };
         let body_expr = body.as_expr().expect(f"Body is not an expression: {body}");
         function.set_body(body_expr);
+        function.set_return_type(return_type);
     });
     public_functions.for_each(|function| {
         let name = function.name();
@@ -39,6 +42,7 @@ pub(crate) comptime fn process_functions(m: Module) -> Quoted {
         };
         let body_expr = body.as_expr().expect(f"Body is not an expression: {body}");
         function.set_body(body_expr);
+        function.set_return_type(return_type);
     });
     utility_functions.for_each(|function| {
         let name = function.name();
@@ -48,6 +52,7 @@ pub(crate) comptime fn process_functions(m: Module) -> Quoted {
         };
         let body_expr = body.as_expr().expect(f"Body is not an expression: {body}");
         function.set_body(body_expr);
+        function.set_return_type(return_type);
     });
 
     // We return the new functions' quotes to be injected into the contract.

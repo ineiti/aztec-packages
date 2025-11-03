@@ -364,9 +364,10 @@ pub(crate) comptime fn transform_utility(f: FunctionDefinition) -> Quoted {
         $contract_self_creation
         $message_discovery_call
     };
-    let body = f.body().as_block().unwrap();
 
     let original_function_name = f.name();
+    let fn_name = f"__aztec_nr_internals__{original_function_name}".quoted_contents();
+    let body = f.body();
     let params = f
         .parameters()
         .map(|(param_name, param_type)| quote { $param_name: $param_type })
@@ -375,7 +376,7 @@ pub(crate) comptime fn transform_utility(f: FunctionDefinition) -> Quoted {
 
     quote {
         #[aztec::macros::external_functions::abi_marker_attributes::abi_utility]
-        unconstrained fn __aztec_nr_internals__$original_function_name($params) -> pub $return_type {
+        unconstrained fn $fn_name($params) -> pub $return_type {
             $to_prepend
             $body
         }
