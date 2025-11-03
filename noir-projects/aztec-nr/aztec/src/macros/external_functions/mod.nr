@@ -20,7 +20,16 @@ comptime fn make_functions_uncallable<let N: u32>(
             std::static_assert(false, $error_message);
         };
         let body_expr = body.as_expr().expect(f"Body is not an expression: {body}");
+
+        // Prefix all parameter names with "_" to suppress unused variable warnings
+        let params = function.parameters();
+        let prefixed_params = params.map(|(param_name, param_type)| {
+            let prefixed_name = f"_{param_name}".quoted_contents();
+            (prefixed_name, param_type)
+        });
+
         function.set_body(body_expr);
+        function.set_parameters(prefixed_params);
         function.set_return_type(return_type);
     });
 }
