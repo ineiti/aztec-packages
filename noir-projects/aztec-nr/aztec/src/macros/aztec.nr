@@ -1,6 +1,7 @@
 use crate::macros::{
     dispatch::generate_public_dispatch,
     functions::{self_call_registry, stub_registry, utils::check_each_fn_macroified},
+    external_functions::{create_fn_abi_exports, process_functions},
     notes::NOTES,
     storage::STORAGE_LAYOUT_NAME,
     utils::{get_trait_impl_method, module_has_storage},
@@ -15,6 +16,13 @@ pub comptime fn aztec(m: Module) -> Quoted {
 
     // Functions that don't have #[external(...)], #[contract_library_method], or #[test] are not allowed in contracts.
     check_each_fn_macroified(m);
+
+    // We generate new functions prefixed with `__aztec_nr_internals__` and we replace the original functions' bodies
+    // with `static_assert(false, ...)` to prevent them from being called directly from within the contract.
+    let functions = process_functions(m);
+
+    // We generate ABI exports for all the external functions in the contract.
+    let fn_abi_exports = create_fn_abi_exports(m);
 
     // We generate `_compute_note_hash_and_nullifier`, `sync_private_state` and `process_message`
     // functions only if they are not already implemented. If they are implemented we just insert empty
@@ -41,6 +49,8 @@ pub comptime fn aztec(m: Module) -> Quoted {
     quote {
         $interface
         $self_call_structs
+        $functions
+        $fn_abi_exports
         $contract_library_method_compute_note_hash_and_nullifier
         $public_dispatch
         $sync_private_state

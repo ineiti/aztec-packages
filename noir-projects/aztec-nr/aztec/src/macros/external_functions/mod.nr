@@ -1,6 +1,9 @@
 mod registry;
 
-use functions::utils::{transform_private, transform_public, transform_utility};
+use functions::{
+    abi_export::create_fn_abi_export,
+    utils::{transform_private, transform_public, transform_utility},
+};
 use registry::{get_private_functions, get_public_functions, get_utility_functions};
 
 pub(crate) comptime fn process_functions(m: Module) -> Quoted {
@@ -42,5 +45,20 @@ pub(crate) comptime fn process_functions(m: Module) -> Quoted {
         $private_functions
         $public_functions
         $utility_functions
+    }
+}
+
+pub(crate) comptime fn create_fn_abi_exports(m: Module) -> Quoted {
+    let private_functions_exports =
+        get_private_functions(m).map(|function| create_fn_abi_export(function)).join(quote {});
+    let public_functions_exports =
+        get_public_functions(m).map(|function| create_fn_abi_export(function)).join(quote {});
+    let utility_functions_exports =
+        get_utility_functions(m).map(|function| create_fn_abi_export(function)).join(quote {});
+
+    quote {
+        $private_functions_exports
+        $public_functions_exports
+        $utility_functions_exports
     }
 }
