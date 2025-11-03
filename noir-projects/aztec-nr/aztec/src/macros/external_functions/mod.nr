@@ -29,6 +29,9 @@ comptime fn make_functions_uncallable<let N: u32>(
         function.set_body(body_expr);
         function.set_parameters(prefixed_params);
         function.set_return_type(return_type);
+        // We need to add the `contract_library_method` attribute to the function to prevent this function from being
+        // compiled as an entrypoint function (function that's compiled as its own circuit).
+        function.add_attribute("contract_library_method");
     });
 }
 

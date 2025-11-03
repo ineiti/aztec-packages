@@ -270,7 +270,6 @@ comptime fn generate_sync_private_state() -> Quoted {
         #[abi(functions)]
         pub struct sync_private_state_abi {
             parameters: sync_private_state_parameters,
-            return_type: ()
         }
 
         #[aztec::macros::external_functions::abi_marker_attributes::abi_utility]
@@ -292,7 +291,6 @@ comptime fn generate_process_message() -> Quoted {
         #[abi(functions)]
         pub struct process_message_abi {
             parameters: process_message_parameters,
-            return_type: ()
         }
 
         #[aztec::macros::external_functions::abi_marker_attributes::abi_utility]
