@@ -82,21 +82,15 @@ Ethereum address that receives all L1 block rewards and tx fees.
 
 ### Generating Keys
 
-Before creating your keystore file, you'll need to generate the required keys.
-
-#### Ethereum Private Keys
-
-Generate Ethereum private keys using Foundry's `cast` tool:
+Generate your keystore using the Aztec CLI's built-in keystore utility:
 
 ```bash
-# Generate a new wallet with a 24-word mnemonic
-cast wallet new-mnemonic --words 24
-
-# This outputs a mnemonic phrase, a derived address, and private key
-# Save these securely - you'll need the private key for the keystore
+aztec validator-keys new --fee-recipient [YOUR_AZTEC_FEE_RECIPIENT_ADDRESS]
 ```
 
-At a minimum, you need one Ethereum private key for the `attester` field. Optionally, you can generate a separate key for the `publisher` field and a separate address for the `coinbase` field.
+This command creates a keystore at `~/.aztec/keystore/key1.json` with all required keys and configuration. For detailed instructions, advanced options, and complete examples, see the [Creating Validator Keystores guide](../operation/sequencer_management/creating_keystores.md).
+
+Once you have your keystore, note the attester and publisher addresses from the output—you'll need these in the next steps.
 
 ## Setup with Docker Compose
 
@@ -112,7 +106,22 @@ touch .env
 
 ### Step 2: Create Keystore File
 
-Create a `keystore.json` file in your `aztec-sequencer/keys` folder with your generated keys:
+Create a `keystore.json` file in your `aztec-sequencer/keys` folder.
+
+**Option 1: Use the Aztec CLI (Recommended)**
+
+```bash
+aztec validator-keys new \
+  --fee-recipient [YOUR_AZTEC_FEE_RECIPIENT_ADDRESS] \
+  --data-dir aztec-sequencer/keys \
+  --file keystore.json
+```
+
+Replace `[YOUR_AZTEC_FEE_RECIPIENT_ADDRESS]` with your Aztec address, or use the zero address if you don't want to specify it now. For detailed instructions and advanced options, see the [Creating Validator Keystores guide](../operation/keystore/creating_keystores.md).
+
+**Option 2: Manual Creation**
+
+Create the file manually with your generated keys:
 
 ```json
 {

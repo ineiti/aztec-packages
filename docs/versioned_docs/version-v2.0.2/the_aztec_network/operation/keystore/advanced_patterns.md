@@ -221,7 +221,88 @@ Both sequencers share publishers while maintaining separate identities and fee r
 
 The `id` receives prover rewards while `publisher` accounts submit proofs.
 
+## Complete Configuration Examples
+
+### High Availability Sequencer Setup
+
+Creating keystores for running the same sequencer across multiple nodes:
+
+```bash
+# Node 1: Create initial keystore with first publisher
+aztec validator-keys new \
+  --fee-recipient [YOUR_FEE_RECIPIENT] \
+  --mnemonic "your shared mnemonic..." \
+  --address-index 0 \
+  --data-dir ~/node1/keys
+
+# Node 2: Same attester, different publisher
+aztec validator-keys new \
+  --fee-recipient [YOUR_FEE_RECIPIENT] \
+  --mnemonic "your shared mnemonic..." \
+  --address-index 1 \
+  --data-dir ~/node2/keys
+
+# Node 3: Same attester, another different publisher
+aztec validator-keys new \
+  --fee-recipient [YOUR_FEE_RECIPIENT] \
+  --mnemonic "your shared mnemonic..." \
+  --address-index 2 \
+  --data-dir ~/node3/keys
+```
+
+Each node has:
+- The **same attester address** (from index 0 of the mnemonic)
+- A **different publisher address** (from different address indices)
+
+For detailed HA setup instructions, see the [High Availability Sequencers guide](../../setup/high_availability_sequencers.md).
+
+### Production Sequencer with Remote Signer
+
+Setting up a secure production sequencer:
+
+```bash
+# Generate a mnemonic (do this once, store securely)
+cast wallet new-mnemonic --words 24 > mnemonic-backup.txt
+
+# Create keystore using remote signer
+aztec validator-keys new \
+  --fee-recipient [YOUR_FEE_RECIPIENT] \
+  --mnemonic "your twenty four word mnemonic..." \
+  --remote-signer https://signer.example.com:8080 \
+  --publisher-count 3 \
+  --data-dir ~/production-sequencer/keys
+```
+
+The keystore contains only addresses, not private keys. Configure your Web3Signer service with the same mnemonic to handle signing.
+
+### Sequencer with BLS Keys for Staking
+
+Creating keystores for a sequencer with BLS keys for staking:
+
+```bash
+# Generate IKM for BLS keys (do this once, store securely)
+IKM=$(openssl rand -hex 32)
+echo "0x$IKM" > bls-ikm-backup.txt
+
+# Create keystore with both ETH and BLS keys
+aztec validator-keys new \
+  --fee-recipient [YOUR_FEE_RECIPIENT] \
+  --mnemonic "your mnemonic for ETH keys..." \
+  --ikm "0x$IKM" \
+  --password "your-encryption-password" \
+  --count 5 \
+  --out-dir ~/staking-keys
+```
+
+This creates 5 sequencer identities with:
+- ETH keys for node operation
+- BLS keys for staking onchain
+- All keys encrypted with password
+
+For information on how to use these keys for staking (including delegated stake), see the [Running Delegated Stake guide](../../setup/../operation/sequencer_management/running_delegated_stake.md).
+
 ## Next steps
 
 - See [Troubleshooting](./troubleshooting.md) for common issues
 - Return to [Key Storage Methods](./storage_methods.md) for more options
+- Start with basics at [Creating Keystores](./creating_keystores.md)

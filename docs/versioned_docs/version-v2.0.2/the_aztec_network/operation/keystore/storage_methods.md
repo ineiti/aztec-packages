@@ -188,7 +188,81 @@ Generates 4 keys at paths `m/44'/60'/0'/0/0` through `m/44'/60'/0'/0/3`.
 Mnemonics are convenient for testing but should be avoided in production. Use remote signers or encrypted keystores for production deployments.
 :::
 
+## BLS Keys for Staking
+
+All sequencers need BLS (Boneh-Lynn-Shacham) keys to stake on the Aztec network. BLS keys are cryptographic keys used specifically for proof-of-stake operations. The staking contract requires:
+- BLS public keys in both G1 and G2 point representations
+- A proof of possession to prevent rogue key attacks
+
+These BLS keys are separate from your ETH keys used for node operations.
+
+### Generate BLS Keys with Sequencer Keys
+
+Create a keystore with both ETH keys (for node operation) and BLS keys (for staking):
+
+```bash
+aztec validator-keys new \
+  --fee-recipient [YOUR_AZTEC_FEE_RECIPIENT] \
+  --mnemonic "your mnemonic phrase..." \
+  --ikm "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" \
+  --password "your-secure-password" \
+  --out-dir ~/staking-keys
+```
+
+**Parameters:**
+- `--ikm`: Initial Keying Material - a 32-byte hex string used as the seed for BLS key derivation (similar to how a mnemonic generates ETH keys)
+- `--mnemonic`: Mnemonic phrase for deriving ETH keys
+- `--password`: Password to encrypt both ETH (JSON V3) and BLS (EIP-2335) keys
+
+This generates:
+- ETH JSON V3 keystores for sequencer operation
+- BLS EIP-2335 keystores for staking onchain
+- A main keystore.json referencing both
+
+### BLS-Only Keystores
+
+Generate only BLS keys without ETH keys:
+
+```bash
+aztec validator-keys new \
+  --fee-recipient 0x0000000000000000000000000000000000000000000000000000000000000000 \
+  --bls-only \
+  --ikm "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" \
+  --password "your-secure-password"
+```
+
+**Use case:** When you need BLS keys for staking but will handle ETH keys separately.
+
+### Custom BLS Derivation Path
+
+Specify a custom EIP-2334 path for BLS key derivation:
+
+```bash
+aztec validator-keys new \
+  --fee-recipient 0x0000000000000000000000000000000000000000000000000000000000000000 \
+  --ikm "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" \
+  --bls-path "m/12381/3600/0/0/5"
+```
+
+### Quick BLS Keypair Generation
+
+For convenience, use the top-level `generate-bls-keypair` command:
+
+```bash
+aztec generate-bls-keypair \
+  --ikm "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" \
+  --json
+```
+
+This outputs BLS public and private keys in JSON format without creating a full keystore.
+
+**Options:**
+- `--g2`: Derive on G2 subgroup instead of G1
+- `--compressed`: Output compressed public key
+- `--out <file>`: Write output to a file instead of stdout
+
 ## Next steps
 
 - Learn about [Advanced Configuration Patterns](./advanced_patterns.md)
 - See [Troubleshooting](./troubleshooting.md) if you encounter issues
+- Return to [Creating Keystores](./creating_keystores.md) for basic setup

@@ -66,34 +66,21 @@ This scaling applies to both single-machine and distributed setups.
 
 ## Generating Keys
 
-Before setting up your prover, you need to generate the required Ethereum private key for the prover publisher.
-
-### Prover Publisher Private Key
-
-The prover publisher key is used to submit proofs to L1. This account needs ETH funding to pay for L1 gas.
-
-Generate an Ethereum private key using Foundry's `cast` tool:
+Before setting up your prover, generate a keystore using the Aztec CLI:
 
 ```bash
-# Generate a new wallet with a 24-word mnemonic
-cast wallet new-mnemonic --words 24
-
-# This outputs a mnemonic phrase, a derived address, and private key
-# Save these securely - you'll need the private key for PROVER_PUBLISHER_PRIVATE_KEY
-# and the address for PROVER_ID
+aztec validator-keys new \
+  --fee-recipient 0x0000000000000000000000000000000000000000000000000000000000000000 \
+  --data-dir ~/prover-keys \
+  --file prover-keystore.json
 ```
 
-**Important notes:**
-- Save both the private key and the derived address securely
-- The private key will be used for `PROVER_PUBLISHER_PRIVATE_KEY`
-- The derived Ethereum address will be used for `PROVER_ID`
+This creates a keystore with the keys needed for your prover. Note the publisher addresses from the output—you'll need to fund these with ETH.
+
+For advanced options like multiple publishers, encrypted keystores, or remote signers, see the [Creating Validator Keystores guide](../operation/keystore/creating_keystores.md).
 
 :::warning Account Funding Required
-The publisher account needs to be funded with ETH to post proofs to L1. Ensure the account holds sufficient ETH for gas costs during operation.
-:::
-
-:::tip
-If you don't have Foundry installed, follow the installation guide at [getfoundry.sh](https://getfoundry.sh/).
+The publisher account(s) need to be funded with ETH to post proofs to L1. Ensure accounts hold sufficient ETH for gas costs during operation.
 :::
 
 ## Setup Options

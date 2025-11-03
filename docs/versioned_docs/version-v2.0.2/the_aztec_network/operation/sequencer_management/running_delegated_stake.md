@@ -125,10 +125,21 @@ struct KeyStore {
 }
 ```
 
-:::tip Keystore Creation Utility
-We will be releasing a utility tool to help you generate properly formatted `KeyStore` structures with correct BLS signatures. This simplifies the process of creating the complex data structures required for this function call.
+:::tip Keystore Creation with BLS Keys
+Use the Aztec CLI's `validator-keys` command to generate properly formatted keystores with BLS keys and signatures:
 
-In the meantime, contact the Aztec team on [Discord](https://discord.gg/aztec) for assistance with generating keystores.
+```bash
+aztec validator-keys new \
+  --fee-recipient [YOUR_AZTEC_FEE_RECIPIENT] \
+  --mnemonic "your mnemonic..." \
+  --ikm "0x..." \
+  --password "encryption-password" \
+  --count 5
+```
+
+This creates keystores with both ETH keys (for node operation) and BLS keys (for staking onchain). For complete instructions, see the [Key Storage Methods guide - BLS Keys for Staking](../keystore/storage_methods.md#bls-keys-for-staking).
+
+For assistance with complex setups, contact the Aztec team on [Discord](https://discord.gg/aztec).
 :::
 
 **Example with sample data:**
