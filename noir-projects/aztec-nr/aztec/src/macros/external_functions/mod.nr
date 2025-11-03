@@ -16,9 +16,7 @@ comptime fn make_functions_uncallable<let N: u32>(
     functions.for_each(|function| {
         let name = function.name();
         let error_message = f"{error_message_template}{name}. Please see the documentation for instructions on the proper invocation of functions: INCLUDE_LINK_HERE";
-        let body = quote {
-            std::static_assert(false, $error_message);
-        };
+        let body = f"std::static_assert(false, \"{error_message}\");".quoted_contents();
         let body_expr = body.as_expr().expect(f"Body is not an expression: {body}");
 
         // Prefix all parameter names with "_" to suppress unused variable warnings
