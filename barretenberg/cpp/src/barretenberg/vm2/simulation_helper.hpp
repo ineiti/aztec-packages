@@ -22,6 +22,8 @@ class AvmSimulationHelper {
                                                       const ProtocolContracts& protocol_contracts);
 
     TxSimulationResult simulate_fast_with_hinted_dbs(const ExecutionHints& hints);
+    // Note: we currently only have hinted raw dbs, TODO eventually remove hints:
+    TxSimulationResult simulate_fast_without_hinted_dbs(const ExecutionHints& hints);
 
     // Simulate a bytecode with some calldata and additional context.
     // Note: this assumes that no nested calls are ever made to other bytecodes.
