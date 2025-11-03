@@ -352,9 +352,23 @@ export class ValidatorClient extends (EventEmitter as new () => WatcherEmitter) 
     }
 
     // If the above function does not throw an error, then we can attest to the proposal
-    // In fisherman mode, create attestations for validation purposes even if not in committee
-    const attestors = partOfCommittee ? inCommittee : this.config.fishermanMode ? this.getValidatorAddresses() : [];
-    return attestors.length > 0 ? this.createBlockAttestationsFromProposal(proposal, attestors) : undefined;
+    // Determine which validators should attest
+    let attestors: EthAddress[];
+    if (partOfCommittee) {
+      attestors = inCommittee;
+    } else if (this.config.fishermanMode) {
+      // In fisherman mode, create attestations for validation purposes even if not in committee. These won't be broadcast.
+      attestors = this.getValidatorAddresses();
+    } else {
+      attestors = [];
+    }
+
+    // Only create attestations if we have attestors
+    if (attestors.length === 0) {
+      return undefined;
+    }
+
+    return this.createBlockAttestationsFromProposal(proposal, attestors);
   }
 
   private slashInvalidBlock(proposal: BlockProposal) {
