@@ -35,7 +35,7 @@ pub(crate) comptime fn transform_private(f: FunctionDefinition) -> Quoted {
     )]
         .append(original_params);
 
-    let body = f.body().as_block().unwrap();
+    let mut body = f.body().as_block().unwrap();
 
     // The original params are hashed and passed to the `context` object, so that the kernel can verify we've received
     // the correct values.
