@@ -11,15 +11,15 @@ use crate::macros::{
 /// the `sync_private_state` utility function.
 /// Note: This is a module annotation, so the returned quote gets injected inside the module (contract) itself.
 pub comptime fn aztec(m: Module) -> Quoted {
-    let interface = generate_contract_interface(m);
-    let self_call_structs = generate_self_call_structs(m);
-
     // Functions that don't have #[external(...)], #[contract_library_method], or #[test] are not allowed in contracts.
     check_each_fn_macroified(m);
 
     // We generate new functions prefixed with `__aztec_nr_internals__` and we replace the original functions' bodies
     // with `static_assert(false, ...)` to prevent them from being called directly from within the contract.
     let functions = process_functions(m);
+
+    let interface = generate_contract_interface(m);
+    let self_call_structs = generate_self_call_structs(m);
 
     // We generate ABI exports for all the external functions in the contract.
     let fn_abi_exports = create_fn_abi_exports(m);
@@ -275,15 +275,9 @@ comptime fn generate_sync_private_state() -> Quoted {
 
         #[aztec::macros::external_functions::abi_marker_attributes::abi_utility]
         unconstrained fn sync_private_state() {
-            let context = dep::aztec::context::utility_context::UtilityContext::new();
-            /// Safety: message discovery returns nothing and is performed solely for its side-effects. It is therefore
-            /// always safe to call.
-            unsafe {
-                aztec::messages::discovery::discover_new_messages(
-                    context.this_address(),
-                    _compute_note_hash_and_nullifier,
-                );
-            };       
+            let address = aztec::context::utility_context::UtilityContext::new().this_address();
+            
+            aztec::messages::discovery::discover_new_messages(address, _compute_note_hash_and_nullifier);
         }
     }
 }
@@ -306,18 +300,11 @@ comptime fn generate_process_message() -> Quoted {
             message_ciphertext: BoundedVec<Field, aztec::messages::encoding::MESSAGE_CIPHERTEXT_LEN>,
             message_context: aztec::messages::processing::message_context::MessageContext,
         ) {
-            let context = dep::aztec::context::utility_context::UtilityContext::new();
-            /// Safety: message discovery returns nothing and is performed solely for its side-effects. It is therefore
-            /// always safe to call.
-            unsafe {
-                aztec::messages::discovery::discover_new_messages(
-                    context.this_address(),
-                    _compute_note_hash_and_nullifier,
-                );
-            };     
+            let address = aztec::context::utility_context::UtilityContext::new().this_address();
 
+            aztec::messages::discovery::discover_new_messages(address, _compute_note_hash_and_nullifier);     
             aztec::messages::discovery::process_message::process_message_ciphertext(
-                self.address,
+                address,
                 _compute_note_hash_and_nullifier,
                 message_ciphertext,
                 message_context,
