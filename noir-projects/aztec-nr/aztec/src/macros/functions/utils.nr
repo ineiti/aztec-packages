@@ -172,7 +172,7 @@ pub(crate) comptime fn transform_private(f: FunctionDefinition) -> Quoted {
 
     quote {
         #[aztec::macros::external_functions::abi_marker_attributes::abi_private]
-        fn $internal_fn_name($params) -> aztec::protocol_types::abis::private_circuit_public_inputs::PrivateCircuitPublicInputs {
+        fn $internal_fn_name($params) -> pub aztec::protocol_types::abis::private_circuit_public_inputs::PrivateCircuitPublicInputs {
             aztec::oracle::version::assert_compatible_oracle_version();
             $contract_self_creation
             $assert_initializer
