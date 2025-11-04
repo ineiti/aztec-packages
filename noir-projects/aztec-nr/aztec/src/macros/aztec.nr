@@ -1,7 +1,7 @@
 use crate::macros::{
     dispatch::generate_public_dispatch,
-    functions::{self_call_registry, stub_registry, utils::check_each_fn_macroified},
     external_functions::{create_fn_abi_exports, process_functions},
+    functions::{self_call_registry, stub_registry, utils::check_each_fn_macroified},
     notes::NOTES,
     storage::STORAGE_LAYOUT_NAME,
     utils::{get_trait_impl_method, module_has_storage},
