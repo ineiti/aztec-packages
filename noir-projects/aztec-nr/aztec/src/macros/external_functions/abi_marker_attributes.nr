@@ -7,3 +7,9 @@ pub comptime fn abi_private(_f: FunctionDefinition) {}
 pub comptime fn abi_public(_f: FunctionDefinition) {}
 
 pub comptime fn abi_utility(_f: FunctionDefinition) {}
+
+pub comptime fn abi_view(_f: FunctionDefinition) {}
+
+pub comptime fn abi_only_self(_f: FunctionDefinition) {}
+
+pub comptime fn abi_initializer(_f: FunctionDefinition) {}

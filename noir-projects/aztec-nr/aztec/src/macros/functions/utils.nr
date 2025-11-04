@@ -15,6 +15,27 @@ use crate::macros::{
 use dep::protocol_types::meta::utils::derive_serialization_quotes;
 use std::meta::{ctstring::AsCtString, type_of};
 
+/// Gathers all attributes relevant to the function's ABI and returns a quote that can be applied to the newly generated
+/// function. We apply the abi marker attributes instead of the original ones (e.g. abi_view instead of view) to avoid
+/// the relevant attribute's functionality from getting triggered.
+comptime fn get_abi_relevant_attributes(f: FunctionDefinition) -> Quoted {
+    let mut attributes = quote {};
+
+    if is_fn_view(f) {
+        attributes = quote { $attributes #[aztec::macros::external_functions::abi_marker_attributes::abi_view] };
+    }
+
+    if is_fn_only_self(f) {
+        attributes = quote { $attributes #[aztec::macros::external_functions::abi_marker_attributes::abi_only_self] };
+    }
+
+    if is_fn_initializer(f) {
+        attributes = quote { $attributes #[aztec::macros::external_functions::abi_marker_attributes::abi_initializer] };
+    }
+
+    attributes
+}
+
 pub(crate) comptime fn transform_private(f: FunctionDefinition) -> Quoted {
     // TODO(benesjan): This function should only generate the new function's quote. Move the following to a different
     // place.
@@ -170,8 +191,12 @@ pub(crate) comptime fn transform_private(f: FunctionDefinition) -> Quoted {
     let fn_name = f"__aztec_nr_internals__{original_function_name}".quoted_contents();
     let body_quote = body.map(|expr| expr.quoted()).join(quote { });
 
+    // Preserve all attributes that are relevant to the function's ABI.
+    let abi_relevant_attributes = get_abi_relevant_attributes(f);
+
     quote {
         #[aztec::macros::external_functions::abi_marker_attributes::abi_private]
+        $abi_relevant_attributes
         fn $fn_name($params) -> pub aztec::protocol_types::abis::private_circuit_public_inputs::PrivateCircuitPublicInputs {
             aztec::oracle::version::assert_compatible_oracle_version();
             $contract_self_creation
@@ -311,11 +336,15 @@ pub(crate) comptime fn transform_public(f: FunctionDefinition) -> Quoted {
         .map(|(param_name, param_type)| quote { $param_name: $param_type })
         .join(quote {, });
 
+    // Preserve all attributes that are relevant to the function's ABI.
+    let abi_relevant_attributes = get_abi_relevant_attributes(f);
+
     // All public functions are automatically made unconstrained, even if they were not marked as such. This is because
     // instead of compiling into a circuit, they will compile to bytecode that will be later transpiled into AVM
     // bytecode.
     quote {
         #[aztec::macros::external_functions::abi_marker_attributes::abi_public]
+        $abi_relevant_attributes
         unconstrained fn $fn_name($params) -> pub $return_type {
             $to_prepend
             $body
