@@ -7,7 +7,7 @@ use std::{collections::umap::UHashMap, hash::BuildHasherDefault, panic};
 pub comptime fn generate_public_dispatch(m: Module) -> Quoted {
     let functions = m.functions();
     let functions =
-        functions.filter(|function: FunctionDefinition| function.has_named_attribute("public"));
+        functions.filter(|function: FunctionDefinition| function.has_named_attribute("abi_public"));
 
     let unit = get_type::<()>();
 
