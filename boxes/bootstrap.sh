@@ -18,9 +18,6 @@ function build {
   echo_header "boxes build"
   npm_install_deps
 
-  # Set VERSION to latest if not defined (required by the aztec command used by yarn build)
-  export VERSION=${VERSION:-latest}
-
   if ! cache_download boxes-$hash.tar.gz; then
     denoise 'yarn build'
     cache_upload boxes-$hash.tar.gz boxes/*/{artifacts,dist,src/contracts/target,contracts/target}
