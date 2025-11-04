@@ -67,9 +67,12 @@ pub comptime fn generate_public_dispatch(m: Module) -> Quoted {
             args = args.push_back(quote { $param_name });
         }
 
+        // We call a function whose name is prefixed with `__aztec_nr_internals__`. This is necessary because the
+        // original function is intentionally made uncallable, preventing direct invocation within the contract.
+        // Instead, a new function with the same name, but prefixed by `__aztec_nr_internals__`, has been generated to
+        // be called here. For more details see the `process_functions` function.
+        let name = f"__aztec_nr_internals__{fn_name}".quoted_contents();
         let args = args.join(quote { , });
-        // name of the function is assigned just before the call so debug metadata doesn't span most of this macro when figuring out where the call comes from.
-        let name = function.name();
         let call = quote { $name($args) };
 
         let return_code = if return_type == unit {
