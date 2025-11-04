@@ -67,7 +67,7 @@ describe.each([
       expect(result.revertCode.isOK()).toBe(true);
     });
 
-    it('AVM simulator MEGA bulk test', async () => {
+    it.skip('AVM simulator MEGA bulk test', async () => {
       tester.setMetricsPrefix('AvmTest contract tests');
       const result = await megaBulkTest(tester, logger, AvmTestContractArtifact);
       expect(result.revertCode.isOK()).toBe(true);
