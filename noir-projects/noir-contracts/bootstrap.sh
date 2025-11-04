@@ -30,7 +30,7 @@ export PLATFORM_TAG=any
 export BB=${BB:-../../barretenberg/cpp/build/bin/bb}
 export NARGO=${NARGO:-../../noir/noir-repo/target/release/nargo}
 export TRANSPILER=${TRANSPILER:-../../avm-transpiler/target/release/avm-transpiler}
-export STRIP_INTERNAL_PREFIX=./scripts/strip_internal_prefix.sh
+export STRIP_INTERNAL_PREFIX=${STRIP_INTERNAL_PREFIX:-./scripts/strip_internal_prefix.sh}
 export BB_HASH=${BB_HASH:-$(../../barretenberg/cpp/bootstrap.sh hash)}
 export NOIR_HASH=${NOIR_HASH:-$(../../noir/bootstrap.sh hash)}
 
