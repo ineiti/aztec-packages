@@ -730,21 +730,19 @@ pub contract AvmTest {
         expected_initialization_hash: Field,
         skip_strictly_limited_side_effects: bool,
     ) {
-        let avm_test = AvmTest::at(self.address);
-
         dep::aztec::oracle::debug_log::debug_log("biwise_ops");
-        let num = avm_test.get_block_number().call(self.context);
+        let num = self.call_self.get_block_number();
         let _ = bitwise_ops(num, num);
         dep::aztec::oracle::debug_log::debug_log("set_storage_single");
-        avm_test.set_storage_single(30).call(self.context);
+        self.call_self.set_storage_single(30);
         dep::aztec::oracle::debug_log::debug_log("set_storage_list");
-        avm_test.set_storage_list(40, 50).call(self.context);
+        self.call_self.set_storage_list(40, 50);
         dep::aztec::oracle::debug_log::debug_log("read_storage_list");
-        let _ = avm_test.set_storage_map(self.address, 60).call(self.context);
+        let _ = self.call_self.set_storage_map(self.address, 60);
         dep::aztec::oracle::debug_log::debug_log("add_storage_map");
-        let _ = avm_test.add_storage_map(self.address, 10).call(self.context);
+        let _ = self.call_self.add_storage_map(self.address, 10);
         dep::aztec::oracle::debug_log::debug_log("read_storage_map");
-        let _ = avm_test.read_storage_map(self.address).call(self.context);
+        let _ = self.call_self.read_storage_map(self.address);
         dep::aztec::oracle::debug_log::debug_log("keccak_hash");
         let _ = keccak256::keccak256(args_u8, args_u8.len());
         dep::aztec::oracle::debug_log::debug_log("sha256_hash");
@@ -760,70 +758,65 @@ pub contract AvmTest {
         dep::aztec::oracle::debug_log::debug_log("field_division");
         let _ = field_division(args_field[0], args_field[1]);
         dep::aztec::oracle::debug_log::debug_log("test_get_contract_instance");
-        avm_test
-            .test_get_contract_instance_matches(
-                get_instance_for_address,
-                expected_deployer,
-                expected_class_id,
-                expected_initialization_hash,
-            )
-            .call(self.context);
+        self.call_self.test_get_contract_instance_matches(
+            get_instance_for_address,
+            expected_deployer,
+            expected_class_id,
+            expected_initialization_hash,
+        );
         dep::aztec::oracle::debug_log::debug_log("get_address");
-        let _ = avm_test.get_address().call(self.context);
+        let _ = self.call_self.get_address();
         dep::aztec::oracle::debug_log::debug_log("get_sender");
-        let _ = avm_test.get_sender().call(self.context);
+        let _ = self.call_self.get_sender();
         dep::aztec::oracle::debug_log::debug_log("get_transaction_fee");
-        let _ = avm_test.get_transaction_fee().call(self.context);
+        let _ = self.call_self.get_transaction_fee();
         dep::aztec::oracle::debug_log::debug_log("get_chain_id");
-        let _ = avm_test.get_chain_id().call(self.context);
+        let _ = self.call_self.get_chain_id();
         dep::aztec::oracle::debug_log::debug_log("get_version");
-        let _ = avm_test.get_version().call(self.context);
+        let _ = self.call_self.get_version();
         dep::aztec::oracle::debug_log::debug_log("get_block_number");
-        let _ = avm_test.get_block_number().call(self.context);
+        let _ = self.call_self.get_block_number();
         dep::aztec::oracle::debug_log::debug_log("get_timestamp");
-        let _ = avm_test.get_timestamp().call(self.context);
+        let _ = self.call_self.get_timestamp();
         dep::aztec::oracle::debug_log::debug_log("get_fee_per_l2_gas");
-        let _ = avm_test.get_fee_per_l2_gas().call(self.context);
+        let _ = self.call_self.get_fee_per_l2_gas();
         dep::aztec::oracle::debug_log::debug_log("get_fee_per_da_gas");
-        let _ = avm_test.get_fee_per_da_gas().call(self.context);
+        let _ = self.call_self.get_fee_per_da_gas();
         dep::aztec::oracle::debug_log::debug_log("get_l2_gas_left");
-        let _ = avm_test.get_l2_gas_left().call(self.context);
+        let _ = self.call_self.get_l2_gas_left();
         dep::aztec::oracle::debug_log::debug_log("get_da_gas_left");
-        let _ = avm_test.get_da_gas_left().call(self.context);
+        let _ = self.call_self.get_da_gas_left();
         if !skip_strictly_limited_side_effects {
             dep::aztec::oracle::debug_log::debug_log("emit_public_log");
-            let _ = avm_test.emit_public_log().call(self.context);
+            let _ = self.call_self.emit_public_log();
         }
         dep::aztec::oracle::debug_log::debug_log("note_hash_exists");
-        let _ = avm_test.note_hash_exists(1, 2).call(self.context);
+        let _ = self.call_self.note_hash_exists(1, 2);
         dep::aztec::oracle::debug_log::debug_log("new_note_hash");
-        let _ = avm_test.new_note_hash(1).call(self.context);
+        let _ = self.call_self.new_note_hash(1);
         dep::aztec::oracle::debug_log::debug_log("new_nullifier");
-        let _ = avm_test.new_nullifier(args_field[0]).call(self.context);
+        let _ = self.call_self.new_nullifier(args_field[0]);
         dep::aztec::oracle::debug_log::debug_log("nullifier_exists");
-        let _ = avm_test.nullifier_exists(1).call(self.context);
+        let _ = self.call_self.nullifier_exists(1);
         dep::aztec::oracle::debug_log::debug_log("l1_to_l2_msg_exists");
-        let _ = avm_test.l1_to_l2_msg_exists(1, 2).call(self.context);
+        let _ = self.call_self.l1_to_l2_msg_exists(1, 2);
         if !skip_strictly_limited_side_effects {
             dep::aztec::oracle::debug_log::debug_log("send_l2_to_l1_msg");
-            let _ =
-                avm_test.send_l2_to_l1_msg(EthAddress::from_field(0x2020), 1).call(self.context);
+            let _ = self.call_self.send_l2_to_l1_msg(EthAddress::from_field(0x2020), 1);
         }
         dep::aztec::oracle::debug_log::debug_log("storage_read_and_write");
-        avm_test.set_storage_single(avm_test.read_storage_single().call(self.context)).call(
-            self.context,
-        );
+        self.call_self.set_storage_single(self.call_self.read_storage_single());
         dep::aztec::oracle::debug_log::debug_log("nested_call_to_add");
-        let _ = avm_test.nested_call_to_add(1, 2).call(self.context);
+        let _ = self.call_self.nested_call_to_add(1, 2);
         dep::aztec::oracle::debug_log::debug_log("nested_static_call_to_add");
-        let _ = avm_test.nested_static_call_to_add(1, 2).call(self.context);
+        let _ = self.call_self.nested_static_call_to_add(1, 2);
         dep::aztec::oracle::debug_log::debug_log("nested_call_to_protocol_contract");
-        let _ = avm_test.call_fee_juice().call(self.context);
+        let _ = self.call_self.call_fee_juice();
         dep::aztec::oracle::debug_log::debug_log("to_le_bytes");
-        let first_byte = avm_test.to_le_bytes(args_field[0]).call(self.context)[0];
+        let first_byte = self.call_self.to_le_bytes(args_field[0])[0];
         assert(first_byte != 0);
         dep::aztec::oracle::debug_log::debug_log("to_le_bits");
-        let first_bit = avm_test.to_le_bits(args_field[0]).call(self.context)[0];
+        let first_bit = self.call_self.to_le_bits(args_field[0])[0];
         assert(first_bit != 0);
         //let _ = nested_call_to_nothing_recovers();
     }
