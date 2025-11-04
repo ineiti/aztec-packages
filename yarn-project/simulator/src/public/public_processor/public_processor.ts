@@ -13,8 +13,8 @@ import {
   AvmExecutionHints,
   type AvmProvingRequest,
   PublicDataWrite,
+  PublicTxSimulatorConfig,
 } from '@aztec/stdlib/avm';
-import type { PublicTxSimulatorConfig } from '@aztec/stdlib/avm';
 import type { AztecAddress } from '@aztec/stdlib/aztec-address';
 import type { ContractDataSource } from '@aztec/stdlib/contract';
 import { computeTransactionFee } from '@aztec/stdlib/fees';

@@ -5,8 +5,13 @@ import { sleep } from '@aztec/foundation/sleep';
 import { TestDateProvider } from '@aztec/foundation/timer';
 import { computeFeePayerBalanceLeafSlot } from '@aztec/protocol-contracts/fee-juice';
 import { bufferAsFields } from '@aztec/stdlib/abi';
-import { AvmCircuitPublicInputs, AvmExecutionHints, PublicDataWrite, RevertCode } from '@aztec/stdlib/avm';
-import { PublicTxResult } from '@aztec/stdlib/avm';
+import {
+  AvmCircuitPublicInputs,
+  AvmExecutionHints,
+  PublicDataWrite,
+  PublicTxResult,
+  RevertCode,
+} from '@aztec/stdlib/avm';
 import { AztecAddress } from '@aztec/stdlib/aztec-address';
 import type { ContractDataSource } from '@aztec/stdlib/contract';
 import { SimulationError } from '@aztec/stdlib/errors';

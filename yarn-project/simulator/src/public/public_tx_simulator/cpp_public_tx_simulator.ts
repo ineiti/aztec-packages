@@ -1,17 +1,17 @@
 import { type Logger, createLogger } from '@aztec/foundation/log';
 import { avmSimulate, avmSimulateWithHintedDbs } from '@aztec/native';
+import { ProtocolContractsList } from '@aztec/protocol-contracts';
 import {
   AvmCircuitInputs,
+  AvmFastSimulationInputs,
+  AvmTxHint,
   PublicTxResult,
   type PublicTxSimulatorConfig,
-  ProtocolContractsList } from '@aztec/protocol-contracts';
-import { AvmFastSimulationInputs, AvmTxHint, deserializeFromMessagePack,
+  deserializeFromMessagePack,
 } from '@aztec/stdlib/avm';
 import { SimulationError } from '@aztec/stdlib/errors';
 import type { MerkleTreeWriteOperations } from '@aztec/stdlib/trees';
 import type { GlobalVariables, StateReference, Tx } from '@aztec/stdlib/tx';
-
-import { strict as assert } from 'assert';
 import { WorldStateRevisionWithHandle } from '@aztec/stdlib/world-state';
 
 import { strict as assert } from 'assert';
@@ -121,7 +121,11 @@ export class CppPublicTxSimulator extends PublicTxSimulator implements PublicTxS
     assert(tsStateRef !== undefined, 'TS state reference should have been captured if C++ succeeded');
 
     // Deserialize the msgpack result
-    const _success = deserializeFromMessagePack<boolean>(resultBuffer);
+    // TODO(fcarreiro): complete this.
+    const cppResultJSON: object = deserializeFromMessagePack(resultBuffer);
+    const cppResult = PublicTxResult.fromJSON(cppResultJSON);
+    assert(cppResult.revertCode.equals(tsResult.revertCode));
+    assert(cppResult.gasUsed.totalGas.equals(tsResult.gasUsed.totalGas));
 
     // Confirm that tree roots match
     const cppStateRef = await this.merkleTree.getStateReference();
