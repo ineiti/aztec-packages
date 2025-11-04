@@ -250,14 +250,13 @@ EOF
       $DOCKER_REPO:$VERSION aztec_process
 
     # Strip internal prefixes from all compiled contract JSONs in target directory
-    # This replicates the functionality of strip_internal_prefix.sh
     docker run ${TTY_FLAGS:-} \
       --user $(id -u):$(id -g) \
       -v $HOME:$HOME \
       -e HOME=$HOME \
       --workdir="$PWD" \
       --entrypoint=/bin/bash \
-      $DOCKER_REPO:$VERSION -c 'for json in target/*.json; do if [ -f "$json" ]; then temp_file="${json}.tmp"; jq ".functions |= map(.name |= sub(\"^__aztec_nr_internals__\"; \"\"))" "$json" > "$temp_file" && mv "$temp_file" "$json"; fi; done'
+      $DOCKER_REPO:$VERSION -c 'for json in target/*.json; do [ -f "$json" ] && /usr/src/noir-projects/noir-contracts/scripts/strip_internal_prefix.sh "$json"; done'
 
     echo "Compilation complete!"
     ;;
