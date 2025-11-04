@@ -1,3 +1,4 @@
+use crate::macros::external_functions::registry::get_public_functions;
 use super::utils::compute_fn_selector;
 use poseidon::poseidon2::Poseidon2Hasher;
 use protocol_types::meta::utils::get_params_len_quote;
@@ -5,9 +6,7 @@ use std::{collections::umap::UHashMap, hash::BuildHasherDefault, panic};
 
 /// Returns an `fn public_dispatch(...)` function for the given module that's assumed to be an Aztec contract.
 pub comptime fn generate_public_dispatch(m: Module) -> Quoted {
-    let functions = m.functions();
-    let functions =
-        functions.filter(|function: FunctionDefinition| function.has_named_attribute("abi_public"));
+    let functions = get_public_functions(m);
 
     let unit = get_type::<()>();
 
