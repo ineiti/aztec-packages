@@ -497,9 +497,7 @@ pub(crate) comptime fn create_authorize_once_check(
     let nonce_check_quote = f"{nonce_arg_name_quoted} == 0".quoted_contents();
 
     let fn_call = if is_private {
-        // At this point, the original args of the fn have already been altered by the macro
-        // to include PrivateContextInputs, so we need to adjust the args_len accordingly.
-        let args_len = f.parameters().len() - 1;
+        let args_len = f.parameters().len();
         quote { dep::aztec::authwit::auth::assert_current_call_valid_authwit::<$args_len> }
     } else {
         quote { dep::aztec::authwit::auth::assert_current_call_valid_authwit_public }
