@@ -11,8 +11,6 @@ comptime fn make_functions_uncallable<let N: u32>(
     functions: [FunctionDefinition],
     error_message_template: str<N>,
 ) {
-    let return_type = quote { () }.as_type();
-
     functions.for_each(|function| {
         let name = function.name();
         // The body of the function will contain a static_assert(false, ...) to prevent the function from being called

@@ -10,10 +10,6 @@ pub(crate) mod utils;
 
 use crate::macros::{
     external_functions::registry::{add_private_function, add_public_function, add_utility_function},
-    functions::{
-        abi_export::create_fn_abi_export,
-        utils::{transform_private, transform_public, transform_utility},
-    },
     utils::{is_fn_external, module_has_initializer},
 };
 use super::utils::{fn_has_noinitcheck, is_fn_initializer, is_fn_only_self, is_fn_view};
