@@ -39,6 +39,7 @@ export class SequencerMetrics {
   private fishermanBlockBuildFailed: UpDownCounter;
   private fishermanBlockBuildSuccess: UpDownCounter;
   private fishermanPrecheckFailed: UpDownCounter;
+  private fishermanSlashingAttempts: UpDownCounter;
 
   private lastSeenSlot?: bigint;
 
@@ -140,6 +141,11 @@ export class SequencerMetrics {
       valueType: ValueType.INT,
       description: 'The number of times a fisherman node failed block proposal pre-build checks',
     });
+
+    this.fishermanSlashingAttempts = this.meter.createUpDownCounter(Metrics.FISHERMAN_SLASHING_ATTEMPTS_COUNT, {
+      valueType: ValueType.INT,
+      description: 'The number of slashing action attempts by a fisherman node',
+    });
   }
 
   public recordRequiredAttestations(requiredAttestationsCount: number, allowanceMs: number) {
@@ -222,5 +228,9 @@ export class SequencerMetrics {
     this.fishermanPrecheckFailed.add(1, {
       [Attributes.ERROR_TYPE]: checkType,
     });
+  }
+
+  recordFishermanSlashingAttempt(actionCount: number) {
+    this.fishermanSlashingAttempts.add(actionCount);
   }
 }

@@ -394,10 +394,13 @@ export class Sequencer extends (EventEmitter as new () => TypedEventEmitter<Sequ
     );
 
     // Enqueue governance and slashing votes (returns promises that will be awaited later)
-    // In fisherman mode, skip voting since we're not participating in consensus
-    const votesPromises = this.config.fishermanMode
-      ? [undefined, undefined]
-      : this.enqueueGovernanceAndSlashingVotes(publisher, attestorAddress, slot, newGlobalVariables.timestamp);
+    // In fisherman mode, we simulate slashing but don't actually publish to L1
+    const votesPromises = this.enqueueGovernanceAndSlashingVotes(
+      publisher,
+      attestorAddress,
+      slot,
+      newGlobalVariables.timestamp,
+    );
 
     // Enqueues block invalidation (skip in fisherman mode)
     if (invalidateBlock && !this.config.skipInvalidateBlockAsProposer && !this.config.fishermanMode) {
@@ -976,7 +979,18 @@ export class Sequencer extends (EventEmitter as new () => TypedEventEmitter<Sequ
       const enqueueSlashingPromise = this.slasherClient
         ? this.slasherClient
             .getProposerActions(slot)
-            .then(actions => publisher.enqueueSlashingActions(actions, slot, timestamp, attestorAddress, signerFn))
+            .then(actions => {
+              // Record metrics for fisherman mode
+              if (this.config.fishermanMode && actions.length > 0) {
+                this.log.debug(`Fisherman mode: simulating ${actions.length} slashing action(s) for slot ${slot}`, {
+                  slot,
+                  actionCount: actions.length,
+                });
+                this.metrics.recordFishermanSlashingAttempt(actions.length);
+              }
+              // Enqueue the actions to fully simulate L1 tx building (they won't be sent in fisherman mode)
+              return publisher.enqueueSlashingActions(actions, slot, timestamp, attestorAddress, signerFn);
+            })
             .catch(err => {
               this.log.error(`Error enqueuing slashing actions`, err, { slot });
               return false;
