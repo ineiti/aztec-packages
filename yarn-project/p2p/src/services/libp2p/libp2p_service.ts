@@ -1021,10 +1021,7 @@ export class LibP2PService<T extends P2PClientType = P2PClientType.Full> extends
   }
 
   private async validateRequestedTx(tx: Tx, peerId: PeerId, txValidator: TxValidator, requested?: Set<`0x${string}`>) {
-    // In fisherman mode, we validate but don't penalize peers
-    const penalize = this.config.fishermanMode
-      ? (_severity: PeerErrorSeverity) => {}
-      : (severity: PeerErrorSeverity) => this.peerManager.penalizePeer(peerId, severity);
+    const penalize = (severity: PeerErrorSeverity) => this.peerManager.penalizePeer(peerId, severity);
 
     if (!(await tx.validateTxHash())) {
       penalize(PeerErrorSeverity.MidToleranceError);

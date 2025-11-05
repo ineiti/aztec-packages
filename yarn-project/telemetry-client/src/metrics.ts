@@ -76,6 +76,10 @@ export const SEQUENCER_REQUIRED_ATTESTATIONS_COUNT = 'aztec.sequencer.attestatio
 export const SEQUENCER_COLLECT_ATTESTATIONS_DURATION = 'aztec.sequencer.attestations.collect_duration';
 export const SEQUENCER_COLLECT_ATTESTATIONS_TIME_ALLOWANCE = 'aztec.sequencer.attestations.collect_allowance';
 
+export const FISHERMAN_BLOCK_BUILD_FAILED_COUNT = 'aztec.fisherman.block.build_failed_count';
+export const FISHERMAN_BLOCK_BUILD_SUCCESS_COUNT = 'aztec.fisherman.block.build_success_count';
+export const FISHERMAN_PRECHECK_FAILED_COUNT = 'aztec.fisherman.precheck.failed_count';
+
 export const L1_PUBLISHER_GAS_PRICE = 'aztec.l1_publisher.gas_price';
 export const L1_PUBLISHER_TX_COUNT = 'aztec.l1_publisher.tx_count';
 export const L1_PUBLISHER_TX_DURATION = 'aztec.l1_publisher.tx_duration';

@@ -56,6 +56,8 @@ export interface SequencerConfig {
   broadcastInvalidBlockProposal?: boolean;
   /** Inject a fake attestation (for testing only) */
   injectFakeAttestation?: boolean;
+  /** Whether to run in fisherman mode: builds blocks on every slot for validation without publishing */
+  fishermanMode?: boolean;
 }
 
 export const SequencerConfigSchema = z.object({
@@ -81,4 +83,5 @@ export const SequencerConfigSchema = z.object({
   secondsBeforeInvalidatingBlockAsNonCommitteeMember: z.number(),
   broadcastInvalidBlockProposal: z.boolean().optional(),
   injectFakeAttestation: z.boolean().optional(),
+  fishermanMode: z.boolean().optional(),
 }) satisfies ZodFor<SequencerConfig>;

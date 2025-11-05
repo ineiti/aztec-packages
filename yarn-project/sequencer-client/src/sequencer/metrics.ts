@@ -36,6 +36,10 @@ export class SequencerMetrics {
   private slots: UpDownCounter;
   private filledSlots: UpDownCounter;
 
+  private fishermanBlockBuildFailed: UpDownCounter;
+  private fishermanBlockBuildSuccess: UpDownCounter;
+  private fishermanPrecheckFailed: UpDownCounter;
+
   private lastSeenSlot?: bigint;
 
   constructor(
@@ -121,6 +125,21 @@ export class SequencerMetrics {
       valueType: ValueType.INT,
       description: 'The minimum number of attestations required to publish a block',
     });
+
+    this.fishermanBlockBuildFailed = this.meter.createUpDownCounter(Metrics.FISHERMAN_BLOCK_BUILD_FAILED_COUNT, {
+      valueType: ValueType.INT,
+      description: 'The number of times a fisherman node failed to build a validation block',
+    });
+
+    this.fishermanBlockBuildSuccess = this.meter.createUpDownCounter(Metrics.FISHERMAN_BLOCK_BUILD_SUCCESS_COUNT, {
+      valueType: ValueType.INT,
+      description: 'The number of times a fisherman node successfully built a validation block',
+    });
+
+    this.fishermanPrecheckFailed = this.meter.createUpDownCounter(Metrics.FISHERMAN_PRECHECK_FAILED_COUNT, {
+      valueType: ValueType.INT,
+      description: 'The number of times a fisherman node failed block proposal pre-build checks',
+    });
   }
 
   public recordRequiredAttestations(requiredAttestationsCount: number, allowanceMs: number) {
@@ -187,5 +206,21 @@ export class SequencerMetrics {
         // no-op
       }
     }
+  }
+
+  recordFishermanBlockBuildFailed(reason?: string) {
+    this.fishermanBlockBuildFailed.add(1, {
+      ...(reason && { [Attributes.ERROR_TYPE]: reason }),
+    });
+  }
+
+  recordFishermanBlockBuildSuccess() {
+    this.fishermanBlockBuildSuccess.add(1);
+  }
+
+  recordFishermanPrecheckFailed(checkType: string) {
+    this.fishermanPrecheckFailed.add(1, {
+      [Attributes.ERROR_TYPE]: checkType,
+    });
   }
 }

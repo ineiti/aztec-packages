@@ -13,6 +13,7 @@ import { type DateProvider, Timer } from '@aztec/foundation/timer';
 import { type TypedEventEmitter, unfreeze } from '@aztec/foundation/types';
 import type { P2P } from '@aztec/p2p';
 import type { SlasherClientInterface } from '@aztec/slasher';
+import { AztecAddress } from '@aztec/stdlib/aztec-address';
 import {
   CommitteeAttestation,
   CommitteeAttestationsAndSigners,
@@ -131,6 +132,11 @@ export class Sequencer extends (EventEmitter as new () => TypedEventEmitter<Sequ
     protected log = createLogger('sequencer'),
   ) {
     super();
+
+    // Add [FISHERMAN] prefix to logger if in fisherman mode
+    if (this.config.fishermanMode) {
+      this.log = log.createChild('[FISHERMAN]');
+    }
 
     this.metrics = new SequencerMetrics(telemetry, this.rollupContract, 'Sequencer');
     // Initialize config
@@ -288,10 +294,18 @@ export class Sequencer extends (EventEmitter as new () => TypedEventEmitter<Sequ
     this.setState(SequencerState.PROPOSER_CHECK, slot);
     const [canPropose, proposer] = await this.checkCanPropose(slot);
 
-    // If we are not a proposer, check if we should invalidate a invalid block, and bail
+    // If we are not a proposer and not in fisherman mode, check if we should invalidate a invalid block, and bail
     if (!canPropose) {
       await this.considerInvalidatingBlock(syncedTo, slot);
       return;
+    }
+
+    // In fisherman mode, log that we're building for validation with the actual proposer's identity
+    if (this.config.fishermanMode) {
+      this.log.debug(
+        `Building validation block for slot ${slot} (actual proposer: ${proposer?.toString() ?? 'none'})`,
+        { slot, proposer: proposer?.toString() },
+      );
     }
 
     // Check that the slot is not taken by a block already (should never happen, since only us can propose for this slot)
@@ -300,6 +314,9 @@ export class Sequencer extends (EventEmitter as new () => TypedEventEmitter<Sequ
         `Cannot propose block at next L2 slot ${slot} since that slot was taken by block ${syncedTo.blockNumber}`,
         { ...syncLogData, block: syncedTo.block.header.toInspect() },
       );
+      if (this.config.fishermanMode) {
+        this.metrics.recordFishermanPrecheckFailed('slot_already_taken');
+      }
       return;
     }
 
@@ -310,8 +327,19 @@ export class Sequencer extends (EventEmitter as new () => TypedEventEmitter<Sequ
     this.log.verbose(`Created publisher at address ${publisher.getSenderAddress()} for attestor ${attestorAddress}`);
     this.publisher = publisher;
 
-    const coinbase = this.validatorClient!.getCoinbaseForAttestor(attestorAddress);
-    const feeRecipient = this.validatorClient!.getFeeRecipientForAttestor(attestorAddress);
+    // Get proposer credentials
+    // In fisherman mode, use placeholder values since we're building for validation only (empty blocks)
+    let coinbase: EthAddress;
+    let feeRecipient: AztecAddress;
+    if (this.config.fishermanMode) {
+      // Fisherman doesn't have the proposer's keys
+      coinbase = EthAddress.ZERO;
+      feeRecipient = this.config.feeRecipient ?? AztecAddress.ZERO;
+      this.log.debug(`Using placeholder credentials for validation`, { coinbase, feeRecipient });
+    } else {
+      coinbase = this.validatorClient!.getCoinbaseForAttestor(attestorAddress);
+      feeRecipient = this.validatorClient!.getFeeRecipientForAttestor(attestorAddress);
+    }
 
     // Prepare invalidation request if the pending chain is invalid (returns undefined if no need)
     const invalidateBlock = await publisher.simulateInvalidateBlock(syncedTo.pendingChainValidationStatus);
@@ -330,6 +358,9 @@ export class Sequencer extends (EventEmitter as new () => TypedEventEmitter<Sequ
         syncLogData,
       );
       this.emit('proposer-rollup-check-failed', { reason: 'Rollup contract check failed' });
+      if (this.config.fishermanMode) {
+        this.metrics.recordFishermanPrecheckFailed('rollup_contract_check_failed');
+      }
       return;
     } else if (canProposeCheck.slot !== slot) {
       this.log.warn(
@@ -337,6 +368,9 @@ export class Sequencer extends (EventEmitter as new () => TypedEventEmitter<Sequ
         { ...syncLogData, rollup: canProposeCheck, newBlockNumber, expectedSlot: slot },
       );
       this.emit('proposer-rollup-check-failed', { reason: 'Slot mismatch' });
+      if (this.config.fishermanMode) {
+        this.metrics.recordFishermanPrecheckFailed('slot_mismatch');
+      }
       return;
     } else if (canProposeCheck.blockNumber !== BigInt(newBlockNumber)) {
       this.log.warn(
@@ -344,6 +378,9 @@ export class Sequencer extends (EventEmitter as new () => TypedEventEmitter<Sequ
         { ...syncLogData, rollup: canProposeCheck, newBlockNumber, expectedSlot: slot },
       );
       this.emit('proposer-rollup-check-failed', { reason: 'Block mismatch' });
+      if (this.config.fishermanMode) {
+        this.metrics.recordFishermanPrecheckFailed('block_number_mismatch');
+      }
       return;
     }
 
@@ -357,15 +394,13 @@ export class Sequencer extends (EventEmitter as new () => TypedEventEmitter<Sequ
     );
 
     // Enqueue governance and slashing votes (returns promises that will be awaited later)
-    const votesPromises = this.enqueueGovernanceAndSlashingVotes(
-      publisher,
-      attestorAddress,
-      slot,
-      newGlobalVariables.timestamp,
-    );
+    // In fisherman mode, skip voting since we're not participating in consensus
+    const votesPromises = this.config.fishermanMode
+      ? [undefined, undefined]
+      : this.enqueueGovernanceAndSlashingVotes(publisher, attestorAddress, slot, newGlobalVariables.timestamp);
 
-    // Enqueues block invalidation
-    if (invalidateBlock && !this.config.skipInvalidateBlockAsProposer) {
+    // Enqueues block invalidation (skip in fisherman mode)
+    if (invalidateBlock && !this.config.skipInvalidateBlockAsProposer && !this.config.fishermanMode) {
       publisher.enqueueInvalidateBlock(invalidateBlock);
     }
 
@@ -384,15 +419,33 @@ export class Sequencer extends (EventEmitter as new () => TypedEventEmitter<Sequ
     // Wait until the voting promises have resolved, so all requests are enqueued
     await Promise.all(votesPromises);
 
-    // And send the tx to L1
-    const l1Response = await publisher.sendRequests();
-    const proposedBlock = l1Response?.successfulActions.find(a => a === 'propose');
-    if (proposedBlock) {
-      this.lastBlockPublished = block;
-      this.emit('block-published', { blockNumber: newBlockNumber, slot: Number(slot) });
-      await this.metrics.incFilledSlot(publisher.getSenderAddress().toString(), coinbase);
-    } else if (block) {
-      this.emit('block-publish-failed', l1Response ?? {});
+    // In fisherman mode, we don't publish to L1
+    if (this.config.fishermanMode) {
+      if (block) {
+        this.log.info(`Built validation block ${newBlockNumber} for slot ${slot}`, {
+          blockNumber: newBlockNumber,
+          slot: Number(slot),
+          archive: block.archive.toString(),
+          txCount: block.body.txEffects.length,
+        });
+        // Store the fisherman block for later comparison (when actual proposal arrives)
+        this.lastBlockPublished = block;
+        this.metrics.recordFishermanBlockBuildSuccess();
+      } else {
+        // Block building failed in fisherman mode
+        this.metrics.recordFishermanBlockBuildFailed('block_build_failed');
+      }
+    } else {
+      // Normal mode: send the tx to L1
+      const l1Response = await publisher.sendRequests();
+      const proposedBlock = l1Response?.successfulActions.find(a => a === 'propose');
+      if (proposedBlock) {
+        this.lastBlockPublished = block;
+        this.emit('block-published', { blockNumber: newBlockNumber, slot: Number(slot) });
+        await this.metrics.incFilledSlot(publisher.getSenderAddress().toString(), coinbase);
+      } else if (block) {
+        this.emit('block-publish-failed', l1Response ?? {});
+      }
     }
 
     this.setState(SequencerState.IDLE, undefined);
@@ -448,6 +501,9 @@ export class Sequencer extends (EventEmitter as new () => TypedEventEmitter<Sequ
         } else {
           this.log.error(`Error building/enqueuing block`, err, { blockNumber: newBlockNumber, slot });
         }
+        if (this.config.fishermanMode) {
+          this.metrics.recordFishermanBlockBuildFailed(err.name || 'unknown_error');
+        }
       }
     } else {
       this.log.verbose(
@@ -455,6 +511,9 @@ export class Sequencer extends (EventEmitter as new () => TypedEventEmitter<Sequ
         { chainTipArchive, blockNumber: newBlockNumber, slot },
       );
       this.emit('tx-count-check-failed', { minTxs: this.minTxsPerBlock, availableTxs: pendingTxCount });
+      if (this.config.fishermanMode) {
+        this.metrics.recordFishermanBlockBuildFailed('insufficient_txs');
+      }
     }
     return block;
   }
@@ -630,27 +689,39 @@ export class Sequencer extends (EventEmitter as new () => TypedEventEmitter<Sequ
         },
       );
 
-      this.log.debug('Collecting attestations');
-      const attestations = await this.collectAttestations(block, usedTxs, proposerAddress);
-      if (attestations !== undefined) {
-        this.log.verbose(`Collected ${attestations.length} attestations`, { blockHash, blockNumber });
+      // In fisherman mode, skip attestation collection
+      let attestations: CommitteeAttestation[] | undefined;
+      if (this.config.fishermanMode) {
+        this.log.debug('Skipping attestation collection');
+        attestations = undefined;
+      } else {
+        this.log.debug('Collecting attestations');
+        attestations = await this.collectAttestations(block, usedTxs, proposerAddress);
+        if (attestations !== undefined) {
+          this.log.verbose(`Collected ${attestations.length} attestations`, { blockHash, blockNumber });
+        }
       }
 
       const attestationsAndSigners = new CommitteeAttestationsAndSigners(attestations ?? []);
-      const attestationsAndSignersSignature = this.validatorClient
-        ? await this.validatorClient.signAttestationsAndSigners(
-            attestationsAndSigners,
-            proposerAddress ?? publisher.getSenderAddress(),
-          )
-        : Signature.empty();
+      // In fisherman mode, skip attestation signing
+      const attestationsAndSignersSignature =
+        this.config.fishermanMode || !this.validatorClient
+          ? Signature.empty()
+          : await this.validatorClient.signAttestationsAndSigners(
+              attestationsAndSigners,
+              proposerAddress ?? publisher.getSenderAddress(),
+            );
 
-      await this.enqueuePublishL2Block(
-        block,
-        attestationsAndSigners,
-        attestationsAndSignersSignature,
-        invalidateBlock,
-        publisher,
-      );
+      // In fisherman mode, skip enqueueing the block for publishing
+      if (!this.config.fishermanMode) {
+        await this.enqueuePublishL2Block(
+          block,
+          attestationsAndSigners,
+          attestationsAndSignersSignature,
+          invalidateBlock,
+          publisher,
+        );
+      }
       this.metrics.recordBuiltBlock(blockBuildDuration, publicGas.l2Gas);
       return block;
     } catch (err) {
@@ -925,6 +996,7 @@ export class Sequencer extends (EventEmitter as new () => TypedEventEmitter<Sequ
    */
   protected async checkCanPropose(slot: bigint): Promise<[boolean, EthAddress | undefined]> {
     let proposer: EthAddress | undefined;
+
     try {
       proposer = await this.epochCache.getProposerAttesterAddressInSlot(slot);
     } catch (e) {
@@ -939,6 +1011,10 @@ export class Sequencer extends (EventEmitter as new () => TypedEventEmitter<Sequ
     // If proposer is undefined, then the committee is empty and anyone may propose
     if (proposer === undefined) {
       return [true, undefined];
+    }
+    // In fisherman mode, just return the current proposer
+    if (this.config.fishermanMode) {
+      return [true, proposer];
     }
 
     const validatorAddresses = this.validatorClient!.getValidatorAddresses();
