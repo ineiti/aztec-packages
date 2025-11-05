@@ -1,5 +1,6 @@
 import type { EpochCacheInterface } from '@aztec/epoch-cache';
 import { type BlockAttestation, PeerErrorSeverity } from '@aztec/stdlib/p2p';
+import { Attributes, Metrics, type TelemetryClient, ValueType } from '@aztec/telemetry-client';
 
 import type { AttestationPool } from '../../mem_pools/attestation_pool/attestation_pool.js';
 import { AttestationValidator } from './attestation_validator.js';
@@ -13,18 +14,31 @@ import { AttestationValidator } from './attestation_validator.js';
  * view of the network.
  */
 export class FishermanAttestationValidator extends AttestationValidator {
+  private invalidAttestationCounter;
+
   constructor(
     epochCache: EpochCacheInterface,
     private attestationPool: AttestationPool,
+    telemetryClient: TelemetryClient,
   ) {
     super(epochCache);
     this.logger = this.logger.createChild('[FISHERMAN]');
+
+    const meter = telemetryClient.getMeter('FishermanAttestationValidator');
+    this.invalidAttestationCounter = meter.createUpDownCounter(Metrics.FISHERMAN_INVALID_ATTESTATION_RECEIVED_COUNT, {
+      description: 'The number of invalid attestations received by the fisherman node',
+      valueType: ValueType.INT,
+    });
   }
 
   override async validate(message: BlockAttestation): Promise<PeerErrorSeverity | undefined> {
     // First run the standard validation
     const baseValidationResult = await super.validate(message);
     if (baseValidationResult !== undefined) {
+      // Track base validation failures (invalid signature, wrong committee, etc.)
+      this.invalidAttestationCounter.add(1, {
+        [Attributes.ERROR_TYPE]: 'base_validation_failed',
+      });
       return baseValidationResult;
     }
 
@@ -56,6 +70,12 @@ export class FishermanAttestationValidator extends AttestationValidator {
             attestationHeader: message.payload.header.hash().toString(),
           },
         );
+
+        // Track invalid attestation metric
+        this.invalidAttestationCounter.add(1, {
+          [Attributes.ERROR_TYPE]: 'payload_mismatch',
+        });
+
         // Return error to reject the message, but LibP2PService won't penalize in fisherman mode
         return PeerErrorSeverity.LowToleranceError;
       }

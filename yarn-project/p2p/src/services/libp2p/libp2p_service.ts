@@ -185,7 +185,7 @@ export class LibP2PService<T extends P2PClientType = P2PClientType.Full> extends
 
     // Use FishermanAttestationValidator in fisherman mode to validate attestation payloads against proposals
     this.attestationValidator = config.fishermanMode
-      ? new FishermanAttestationValidator(epochCache, mempools.attestationPool!)
+      ? new FishermanAttestationValidator(epochCache, mempools.attestationPool!, telemetry)
       : new AttestationValidator(epochCache);
     this.blockProposalValidator = new BlockProposalValidator(epochCache, { txsPermitted: !config.disableTransactions });
 

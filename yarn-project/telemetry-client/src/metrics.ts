@@ -80,6 +80,7 @@ export const FISHERMAN_BLOCK_BUILD_FAILED_COUNT = 'aztec.fisherman.block.build_f
 export const FISHERMAN_BLOCK_BUILD_SUCCESS_COUNT = 'aztec.fisherman.block.build_success_count';
 export const FISHERMAN_PRECHECK_FAILED_COUNT = 'aztec.fisherman.precheck.failed_count';
 export const FISHERMAN_SLASHING_ATTEMPTS_COUNT = 'aztec.fisherman.slashing.attempts_count';
+export const FISHERMAN_INVALID_ATTESTATION_RECEIVED_COUNT = 'aztec.fisherman.invalid_attestation_received_count';
 
 export const L1_PUBLISHER_GAS_PRICE = 'aztec.l1_publisher.gas_price';
 export const L1_PUBLISHER_TX_COUNT = 'aztec.l1_publisher.tx_count';

@@ -431,6 +431,91 @@ groups:
           labels:
             <<: *common_labels
           isPaused: false
+        - uid: ief0k9en0zuvtx
+          title: Fisherman - invalid attestations received
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: spartan-metrics-prometheus
+              model:
+                editorMode: code
+                expr: sum by (k8s_namespace_name, aztec_error_type) (increase(aztec_fisherman_invalid_attestation_received_count{k8s_namespace_name=~".*(fisherman|mainnet).*"}[$__rate_interval]))
+                instant: true
+                intervalMs: 60000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params: []
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - B
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                reducer: last
+                refId: B
+                type: reduce
+            - refId: C
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 1
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: B
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          dashboardUid: ""
+          panelId: 0
+          noDataState: NoData
+          execErrState: Error
+          for: 5m
+          annotations:
+            summary: Fisherman node received invalid attestations
+            description: Fisherman node ({{ ` {{ $labels.k8s_namespace_name }} ` }}) received invalid attestations from other validators. Reason - {{ ` {{ $labels.aztec_error_type }} ` }}.
+          labels:
+            <<: *common_labels
+          isPaused: false
         - uid: bef0du59q8sg0b
           title: Chain - no new blocks
           condition: C
