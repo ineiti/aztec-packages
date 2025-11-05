@@ -236,16 +236,27 @@ locals {
           }
         }
       })] : []
-      custom_settings = {
-        "nodeType"                                    = "rpc"
-        "replicaCount"                                = var.RPC_REPLICAS
-        "node.proverRealProofs"                       = var.PROVER_REAL_PROOFS
-        "ingress.rpc.enabled"                         = var.RPC_INGRESS_ENABLED
-        "ingress.rpc.host"                            = var.RPC_INGRESS_HOST
-        "node.env.AWS_ACCESS_KEY_ID"                  = var.R2_ACCESS_KEY_ID
-        "node.env.AWS_SECRET_ACCESS_KEY"              = var.R2_SECRET_ACCESS_KEY
-        "node.env.P2P_TX_POOL_DELETE_TXS_AFTER_REORG" = var.P2P_TX_POOL_DELETE_TXS_AFTER_REORG
-      }
+      custom_settings = merge(
+        {
+          "nodeType"                                    = "rpc"
+          "replicaCount"                                = var.RPC_REPLICAS
+          "node.proverRealProofs"                       = var.PROVER_REAL_PROOFS
+          "ingress.rpc.enabled"                         = var.RPC_INGRESS_ENABLED
+          "ingress.rpc.host"                            = var.RPC_INGRESS_HOST
+          "node.env.AWS_ACCESS_KEY_ID"                  = var.R2_ACCESS_KEY_ID
+          "node.env.AWS_SECRET_ACCESS_KEY"              = var.R2_SECRET_ACCESS_KEY
+          "node.env.P2P_TX_POOL_DELETE_TXS_AFTER_REORG" = var.P2P_TX_POOL_DELETE_TXS_AFTER_REORG
+        },
+        # Only set RPC mnemonic config in fisherman mode)
+        var.FISHERMAN_MNEMONIC != "" ? {
+          "node.secret.envEnabled"       = true
+          "node.secret.mnemonic"         = var.FISHERMAN_MNEMONIC
+          "node.secret.mnemonicIndex"    = var.FISHERMAN_MNEMONIC_START_INDEX
+          "node.env.KEY_INDEX_START"     = var.FISHERMAN_MNEMONIC_START_INDEX
+          "node.env.VALIDATORS_PER_NODE" = "1"
+          "node.preStartScript"          = "source /scripts/get-private-key.sh"
+        } : {}
+      )
       boot_node_host_path  = "node.env.BOOT_NODE_HOST"
       bootstrap_nodes_path = "node.env.BOOTSTRAP_NODES"
       wait                 = true
