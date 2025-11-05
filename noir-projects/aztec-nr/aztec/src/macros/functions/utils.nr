@@ -1,3 +1,5 @@
+// TODO(benesjan): Move this whole file to `noir-projects/aztec-nr/aztec/src/macros/internals_functions_generation`.
+// Not done yet in order to not murder the PR diff.
 use crate::macros::{
     functions::{
         auth_registry::AUTHORIZE_ONCE_REGISTRY,
@@ -22,15 +24,15 @@ comptime fn get_abi_relevant_attributes(f: FunctionDefinition) -> Quoted {
     let mut attributes = quote {};
 
     if is_fn_view(f) {
-        attributes = quote { $attributes #[aztec::macros::external_functions::abi_marker_attributes::abi_view] };
+        attributes = quote { $attributes #[aztec::macros::internals_functions_generation::abi_marker_attributes::abi_view] };
     }
 
     if is_fn_only_self(f) {
-        attributes = quote { $attributes #[aztec::macros::external_functions::abi_marker_attributes::abi_only_self] };
+        attributes = quote { $attributes #[aztec::macros::internals_functions_generation::abi_marker_attributes::abi_only_self] };
     }
 
     if is_fn_initializer(f) {
-        attributes = quote { $attributes #[aztec::macros::external_functions::abi_marker_attributes::abi_initializer] };
+        attributes = quote { $attributes #[aztec::macros::internals_functions_generation::abi_marker_attributes::abi_initializer] };
     }
 
     attributes
@@ -195,7 +197,7 @@ pub(crate) comptime fn transform_private(f: FunctionDefinition) -> Quoted {
     let abi_relevant_attributes = get_abi_relevant_attributes(f);
 
     quote {
-        #[aztec::macros::external_functions::abi_marker_attributes::abi_private]
+        #[aztec::macros::internals_functions_generation::abi_marker_attributes::abi_private]
         $abi_relevant_attributes
         fn $fn_name($params) -> pub aztec::protocol_types::abis::private_circuit_public_inputs::PrivateCircuitPublicInputs {
             aztec::oracle::version::assert_compatible_oracle_version();
@@ -343,7 +345,7 @@ pub(crate) comptime fn transform_public(f: FunctionDefinition) -> Quoted {
     // instead of compiling into a circuit, they will compile to bytecode that will be later transpiled into AVM
     // bytecode.
     quote {
-        #[aztec::macros::external_functions::abi_marker_attributes::abi_public]
+        #[aztec::macros::internals_functions_generation::abi_marker_attributes::abi_public]
         $abi_relevant_attributes
         unconstrained fn $fn_name($params) -> pub $return_type {
             $to_prepend
@@ -404,7 +406,7 @@ pub(crate) comptime fn transform_utility(f: FunctionDefinition) -> Quoted {
     let return_type = f.return_type();
 
     quote {
-        #[aztec::macros::external_functions::abi_marker_attributes::abi_utility]
+        #[aztec::macros::internals_functions_generation::abi_marker_attributes::abi_utility]
         unconstrained fn $fn_name($params) -> pub $return_type {
             $to_prepend
             $body

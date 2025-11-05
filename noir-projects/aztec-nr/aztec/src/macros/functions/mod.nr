@@ -1,4 +1,3 @@
-pub(crate) mod abi_export;
 pub(crate) mod call_interface_stubs;
 // TODO: Move initialization_utils out of this crate
 // See https://github.com/AztecProtocol/aztec-packages/pull/15856#discussion_r2229134689 for more details
@@ -9,7 +8,7 @@ pub(crate) mod auth_registry;
 pub(crate) mod utils;
 
 use crate::macros::{
-    external_functions::registry::{add_private_function, add_public_function, add_utility_function},
+    internals_functions_generation::external_functions_registry,
     utils::{is_fn_external, module_has_initializer},
 };
 use super::utils::{fn_has_noinitcheck, is_fn_initializer, is_fn_only_self, is_fn_view};
@@ -139,13 +138,13 @@ pub comptime fn authorize_once(
 pub comptime fn external(f: FunctionDefinition, f_type: CtString) {
     if f_type.eq("private") {
         assert_valid_private(f);
-        add_private_function(f);
+        external_functions_registry::add_private(f);
     } else if f_type.eq("public") {
         assert_valid_public(f);
-        add_public_function(f);
+        external_functions_registry::add_public(f);
     } else if f_type.eq("utility") {
         assert_valid_utility(f);
-        add_utility_function(f);
+        external_functions_registry::add_utility(f);
     } else {
         let function_name = f.name();
         panic(

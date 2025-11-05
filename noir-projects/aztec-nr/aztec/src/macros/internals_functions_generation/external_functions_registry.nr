@@ -1,3 +1,7 @@
+//! Registry for external functions that are added to the corresponding global variable when the `#[external(...)]`
+//! macro is applied. This registry is then used by the `#[aztec]` macro to generate the functions prefixed with
+//! `__aztec_nr_internals___` and the `public_dispatch` function.
+
 use poseidon::poseidon2::Poseidon2Hasher;
 use std::{collections::umap::UHashMap, hash::BuildHasherDefault};
 
@@ -23,15 +27,15 @@ comptime fn add_to_registry(
     registry.insert(module, functions_to_insert);
 }
 
-pub(crate) comptime fn add_private_function(f: FunctionDefinition) {
+pub(crate) comptime fn add_private(f: FunctionDefinition) {
     add_to_registry(&mut PRIVATE_REGISTRY, f);
 }
 
-pub(crate) comptime fn add_public_function(f: FunctionDefinition) {
+pub(crate) comptime fn add_public(f: FunctionDefinition) {
     add_to_registry(&mut PUBLIC_REGISTRY, f);
 }
 
-pub(crate) comptime fn add_utility_function(f: FunctionDefinition) {
+pub(crate) comptime fn add_utility(f: FunctionDefinition) {
     add_to_registry(&mut UTILITY_REGISTRY, f);
 }
 

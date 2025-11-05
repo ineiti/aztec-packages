@@ -1,7 +1,7 @@
 use crate::macros::{
     dispatch::generate_public_dispatch,
-    external_functions::{create_fn_abi_exports, process_functions},
     functions::{self_call_registry, stub_registry, utils::check_each_fn_macroified},
+    internals_functions_generation::{create_fn_abi_exports, process_functions},
     notes::NOTES,
     storage::STORAGE_LAYOUT_NAME,
     utils::{get_trait_impl_method, module_has_storage},
@@ -272,7 +272,7 @@ comptime fn generate_sync_private_state() -> Quoted {
             parameters: sync_private_state_parameters,
         }
 
-        #[aztec::macros::external_functions::abi_marker_attributes::abi_utility]
+        #[aztec::macros::internals_functions_generation::abi_marker_attributes::abi_utility]
         unconstrained fn sync_private_state() {
             let address = aztec::context::utility_context::UtilityContext::new().this_address();
             
@@ -293,7 +293,7 @@ comptime fn generate_process_message() -> Quoted {
             parameters: process_message_parameters,
         }
 
-        #[aztec::macros::external_functions::abi_marker_attributes::abi_utility]
+        #[aztec::macros::internals_functions_generation::abi_marker_attributes::abi_utility]
         unconstrained fn process_message(
             message_ciphertext: BoundedVec<Field, aztec::messages::encoding::MESSAGE_CIPHERTEXT_LEN>,
             message_context: aztec::messages::processing::message_context::MessageContext,

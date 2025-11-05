@@ -1,4 +1,4 @@
-use crate::macros::external_functions::registry::get_public_functions;
+use crate::macros::internals_functions_generation::external_functions_registry::get_public_functions;
 use super::utils::compute_fn_selector;
 use poseidon::poseidon2::Poseidon2Hasher;
 use protocol_types::meta::utils::get_params_len_quote;
@@ -107,7 +107,7 @@ pub comptime fn generate_public_dispatch(m: Module) -> Quoted {
 
         let body = quote {
             // We mark this as public because our whole system depends on public functions having this attribute.
-            #[aztec::macros::external_functions::abi_marker_attributes::abi_public]
+            #[aztec::macros::internals_functions_generation::abi_marker_attributes::abi_public]
             pub unconstrained fn public_dispatch(selector: Field) {
                 $dispatch
             }
