@@ -190,30 +190,39 @@ pub(crate) comptime fn transform_private(f: FunctionDefinition) -> Quoted {
 
     let context_finish = quote { self.context.finish() };
 
-    let fn_name = f"__aztec_nr_internals__{original_function_name}".quoted_contents();
-    let body_quote = body.map(|expr| expr.quoted()).join(quote { });
-
     // Preserve all attributes that are relevant to the function's ABI.
     let abi_relevant_attributes = get_abi_relevant_attributes(f);
+
+    let fn_name = f"__aztec_nr_internals__{original_function_name}".quoted_contents();
+
+    let to_prepend = quote {
+        dep::aztec::oracle::version::assert_compatible_oracle_version();
+        $contract_self_creation
+        $assert_initializer
+        $init_check
+        $internal_check
+        $view_check
+        $message_discovery_call
+        $authorize_once_check
+    };
+
+    let body_quote = body.map(|expr| expr.quoted()).join(quote { });
+
+    let to_append = quote {
+        $return_value
+        $mark_as_initialized
+        $context_finish
+    };
 
     quote {
         #[aztec::macros::internals_functions_generation::abi_marker_attributes::abi_private]
         $abi_relevant_attributes
         fn $fn_name($params) -> pub aztec::protocol_types::abis::private_circuit_public_inputs::PrivateCircuitPublicInputs {
-            aztec::oracle::version::assert_compatible_oracle_version();
-            $contract_self_creation
-            $assert_initializer
-            $init_check
-            $internal_check
-            $view_check
-            $message_discovery_call
-            $authorize_once_check
+            $to_prepend
 
             $body_quote
 
-            $return_value
-            $mark_as_initialized
-            $context_finish
+            $to_append
         }
     }
 }
