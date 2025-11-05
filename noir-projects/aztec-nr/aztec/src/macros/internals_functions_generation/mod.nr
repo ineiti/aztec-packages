@@ -87,6 +87,7 @@ pub(crate) comptime fn process_functions(m: Module) -> Quoted {
     }
 }
 
+// See docs of create_fn_abi_export for information on what this does.
 pub(crate) comptime fn create_fn_abi_exports(m: Module) -> Quoted {
     let private_functions_exports =
         get_private_functions(m).map(|function| create_fn_abi_export(function)).join(quote {});
