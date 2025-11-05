@@ -192,6 +192,17 @@ export class SequencerPublisher {
   }
 
   /**
+   * Clears all pending requests without sending them.
+   */
+  public clearPendingRequests(): void {
+    const count = this.requests.length;
+    this.requests = [];
+    if (count > 0) {
+      this.log.debug(`Cleared ${count} pending request(s)`);
+    }
+  }
+
+  /**
    * Sends all requests that are still valid.
    * @returns one of:
    * - A receipt and stats if the tx succeeded

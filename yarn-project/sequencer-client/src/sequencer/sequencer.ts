@@ -424,6 +424,9 @@ export class Sequencer extends (EventEmitter as new () => TypedEventEmitter<Sequ
 
     // In fisherman mode, we don't publish to L1
     if (this.config.fishermanMode) {
+      // Clear pending requests
+      publisher.clearPendingRequests();
+
       if (block) {
         this.log.info(`Built validation block ${newBlockNumber} for slot ${slot}`, {
           blockNumber: newBlockNumber,
