@@ -534,10 +534,16 @@ library ValidatorSelectionLib {
    *      affected by last-minute changes or L1 reorgs during synchronization.
    * @param _epoch The epoch to calculate sampling time for
    * @return The Unix timestamp (uint32) to use for validator set sampling
+   * @custom:reverts Errors.ValidatorSelection__EpochInTheFuture if computed sample time is in the future
    */
   function epochToSampleTime(Epoch _epoch) internal view returns (uint32) {
     uint32 sub = getStorage().lagInEpochs * TimeLib.getEpochDurationInSeconds().toUint32();
-    return Timestamp.unwrap(_epoch.toTimestamp()).toUint32() - sub;
+    uint32 ts = Timestamp.unwrap(_epoch.toTimestamp()).toUint32() - sub;
+    require(
+      ts <= block.timestamp,
+      Errors.ValidatorSelection__EpochInTheFuture(uint256(Epoch.unwrap(_epoch)), uint32(block.timestamp))
+    );
+    return ts;
   }
 
   /**
