@@ -1,6 +1,6 @@
-//! Functions corresponding to marker attributes that are applied by the Aztec.nr macros to the generated functions with
-//! the `__aztec_nr_internals___` prefix in the name. The attributes are prefixed with `abi_` as they are used only
-//! for ABI purposes and artifact generation.
+//! Marker attributes that are applied by the Aztec.nr macros to the generated functions with the
+//! `__aztec_nr_internals___` prefix in the name. The attributes are prefixed with `abi_` as they are used only for ABI
+//! purposes and artifact generation.
 
 // Applied to macro-generated functions with the `__aztec_nr_internals___` prefix, which are created from functions
 // annotated with `#[external("private")]`.

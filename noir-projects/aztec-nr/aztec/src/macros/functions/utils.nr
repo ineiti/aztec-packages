@@ -219,9 +219,7 @@ pub(crate) comptime fn transform_private(f: FunctionDefinition) -> Quoted {
         $abi_relevant_attributes
         fn $fn_name($params) -> pub aztec::protocol_types::abis::private_circuit_public_inputs::PrivateCircuitPublicInputs {
             $to_prepend
-
             $body_quote
-
             $to_append
         }
     }
