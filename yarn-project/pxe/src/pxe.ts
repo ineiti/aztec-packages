@@ -80,11 +80,12 @@ import { TaggingDataProvider } from './storage/tagging_data_provider/tagging_dat
 import { Synchronizer } from './synchronizer/index.js';
 
 export type PrivateEvent = {
-  msgContent: Fr[];
+  packedEvent: Fr[];
   blockNumber: number;
   blockHash: L2BlockHash;
   txHash: TxHash;
   recipient: AztecAddress;
+  eventSelector: EventSelector;
 };
 
 /**
@@ -1072,11 +1073,11 @@ export class PXE {
   /**
    * Returns the private events given search parameters.
    * @param contractAddress - The address of the contract to get events from.
-   * @param eventMetadata - Metadata of the event. This should be the class generated from the contract. e.g. Contract.events.Event
+   * @param eventSelector - Event selector to search for.
    * @param from - The block number to search from.
    * @param numBlocks - The amount of blocks to search.
    * @param recipients - The addresses that decrypted the logs.
-   * @returns - The deserialized events.
+   * @returns - The packed events with block and tx metadata.
    */
   public async getPrivateEvents(
     contractAddress: AztecAddress,

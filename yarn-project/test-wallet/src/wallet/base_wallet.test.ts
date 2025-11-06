@@ -57,11 +57,12 @@ describe('BaseWallet', () => {
   // eslint-disable-next-line jsdoc/require-jsdoc
   async function privateEventFor(serial: Fr[]): Promise<PrivateEvent> {
     return {
-      msgContent: serial,
+      packedEvent: serial,
       recipient: await AztecAddress.random(),
       blockHash: L2BlockHash.random(),
       blockNumber: 42,
       txHash: TxHash.random(),
+      eventSelector: TokenContract.events.Transfer.eventSelector,
     };
   }
 

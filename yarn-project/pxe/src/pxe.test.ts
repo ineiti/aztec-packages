@@ -199,18 +199,19 @@ describe('PXE', () => {
 
     async function storeEvent(index: number): Promise<PrivateEvent> {
       const event = {
-        msgContent: [Fr.random(), Fr.random()],
+        packedEvent: [Fr.random(), Fr.random()],
         blockNumber,
         blockHash,
         txHash: TxHash.random(),
         recipient,
+        eventSelector,
       };
 
       await privateEventDataProvider.storePrivateEventLog(
         contractAddress,
         recipient,
         eventSelector,
-        event.msgContent,
+        event.packedEvent,
         event.txHash,
         index,
         blockNumber,

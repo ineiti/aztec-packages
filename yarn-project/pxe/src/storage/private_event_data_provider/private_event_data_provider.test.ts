@@ -300,7 +300,7 @@ describe('PrivateEventDataProvider', () => {
         eventSelector,
       );
 
-      expect(events.map(e => e.msgContent)).toEqual([msgContent1, msgContent2, msgContent3]);
+      expect(events.map(e => e.packedEvent)).toEqual([msgContent1, msgContent2, msgContent3]);
     });
   });
 });

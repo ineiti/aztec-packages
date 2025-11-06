@@ -125,11 +125,12 @@ export class PrivateEventDataProvider {
         events.push({
           eventCommitmentIndex: entry.eventCommitmentIndex,
           event: {
-            msgContent,
+            packedEvent: msgContent,
             blockNumber: entry.blockNumber,
             recipient,
             txHash,
             blockHash,
+            eventSelector,
           },
         });
       }
