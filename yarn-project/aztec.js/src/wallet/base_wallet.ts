@@ -348,7 +348,7 @@ export abstract class BaseWallet implements Wallet {
     const events = await this.pxe.getPrivateEvents(contractAddress, eventDef.eventSelector, from, limit, recipients);
 
     const decodedEvents = events.map(
-      (event: any /** PrivateEvent */): T => decodeFromAbi([eventDef.abiType], event.msgContent) as T,
+      (event: any /** PrivateEvent */): T => decodeFromAbi([eventDef.abiType], event.packedEvent) as T,
     );
 
     return decodedEvents;
